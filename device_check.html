@@ -1,3 +1,4 @@
+<!-- ver3 · 2026-11-15 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -134,14 +135,14 @@ tr.reco td,tr.reco th{font-weight:800}
 <body>
 <header class="top"><div class="hbar">
   <div class="mark">🩺</div>
-  <div><b>교실 기기 점검</b><small>우유왕 출석 · 11주차 실습</small></div>
+  <div><b>교실 기기 점검</b><small>우유왕 출석 · 선생님 도구</small></div>
   <div class="sp"></div>
   <button class="btn ghost sm" onclick="location.href='tools.html'">← 도구 모음</button>
 </div></header>
 
 <div class="wrap narrow">
   <h1>🩺 교실 기기 점검</h1>
-  <p class="lead">학생이 쓸 기기에서 이 주소를 열고, 아래 항목을 확인한 뒤 결과를 활동지에 붙이세요.</p>
+  <p class="lead">학생이 쓸 기기에서 이 주소를 열고, 아래 항목을 확인한 뒤 결과를 기록해 두세요.</p>
 
   <section class="card">
     <h2><span class="pill">1</span> 자동으로 확인한 것</h2>
@@ -166,7 +167,7 @@ tr.reco td,tr.reco th{font-weight:800}
 
   <section class="card">
     <h2><span class="pill">3</span> 결과 복사</h2>
-    <p class="note" style="margin-bottom:13px">기기 종류마다 한 번씩 눌러 활동지 3번에 붙이세요.</p>
+    <p class="note" style="margin-bottom:13px">기기 종류마다 한 번씩 눌러 기록해 두세요.</p>
     <button class="btn block" id="btnCopy">📋 결과 복사</button>
     <div id="copyMsg"></div>
     <div class="scroll" style="margin-top:14px"><table id="tbl"></table></div>
@@ -175,7 +176,7 @@ tr.reco td,tr.reco th{font-weight:800}
 
 <!-- 티처블 머신이 준 script 태그. 버전을 바꾸지 않는다. -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/custom-teachablemachine-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 <script>
 
 /* =====================================================================
@@ -206,10 +207,15 @@ function modelLabels(){ return __labels.slice(); }
 
 /* 모델을 못 읽었을 때 늘 같은 안내를 보여 준다 */
 function modelErrorHtml(e){
-  return '<b>모델을 불러오지 못했습니다.</b><br>' +
-    '이 파일을 더블클릭으로 열면 브라우저가 model.json 읽기를 막습니다. ' +
-    '배포 주소(http:// 또는 https://)로 열어 주세요.<br>' +
-    '<span style="opacity:.75">(' + esc(e.message || e) + ')</span>';
+  let why;
+  if(typeof tmImage === "undefined")
+    why = '티처블 머신 라이브러리를 받지 못했습니다. 인터넷 연결이나 학교 방화벽(cdn.jsdelivr.net)을 확인해 주세요.';
+  else if(location.protocol === "file:")
+    why = '파일을 더블클릭으로 열면 브라우저가 model.json 읽기를 막습니다. 배포 주소로 열어 주세요.';
+  else
+    why = '같은 폴더에서 model.json · metadata.json · weights.bin 을 찾지 못했습니다. 세 파일이 이 화면과 같은 자리에 있는지 확인해 주세요.';
+  return '<b>모델을 불러오지 못했습니다.</b><br>' + why +
+    '<br><span style="opacity:.75">(' + esc(e.message || e) + ')</span>';
 }
 
 /* ── 흰 정사각형에 비율을 지켜 담기 ─────────────────────────────── */
@@ -455,7 +461,7 @@ function copyAll(){
   lines.push("- 기기/브라우저: " + navigator.userAgent);
   const text = lines.join("\n");
   navigator.clipboard.writeText(text)
-    .then(()=> msg("copyMsg","복사했습니다. 활동지 3번에 붙여 넣으세요.","ok"))
+    .then(()=> msg("copyMsg","복사했습니다. 기록표에 붙여 넣으세요.","ok"))
     .catch(()=> msg("copyMsg","복사가 막혔습니다. 아래 표를 직접 긁어서 복사하세요.","warn"));
 }
 
