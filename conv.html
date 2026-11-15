@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>필터 체험기</title>
+<style>
+:root{
+  --pp:#7C4DFF; --pp-d:#6336E0; --pp-l:#EFE9FF; --pp-xl:#F8F5FF;
+  --or:#FF9F43; --or-l:#FFF1E2; --bl:#4A9BFF; --bl-l:#E6F1FF;
+  --gr:#22C07D; --gr-l:#E3F8EF; --rd:#F2614F; --rd-l:#FDECE9;
+  --yl:#FFC53D; --yl-l:#FFF6DF;
+  --ink:#2A2440; --sub:#7A7591; --line:#ECE8F6;
+  --r:24px; --r2:18px; --r3:12px;
+  --sh:0 8px 26px rgba(95,70,180,.10), 0 2px 6px rgba(95,70,180,.05);
+  --sh2:0 16px 40px rgba(95,70,180,.18);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{min-height:100vh;color:var(--ink);font-size:15px;line-height:1.6;
+  font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  background:linear-gradient(180deg,#F7F4FF 0%,#FDFCFF 38%,#FFFFFF 100%);
+  position:relative;overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none}
+body::before{width:440px;height:440px;background:rgba(150,110,255,.18);top:-170px;left:-140px}
+body::after{width:380px;height:380px;background:rgba(255,190,100,.18);bottom:-150px;right:-120px}
+
+header.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.93);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.hbar{max-width:1060px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:12px}
+.hbar .mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;
+  background:linear-gradient(145deg,#9B6BFF,#6336E0);box-shadow:0 6px 16px rgba(99,54,224,.32);flex:0 0 auto}
+.hbar b{font-size:16px;letter-spacing:-.3px;display:block;line-height:1.25}
+.hbar small{font-size:11.5px;color:var(--sub)}
+.hbar .sp{flex:1}
+
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:26px 18px 60px}
+.narrow{max-width:540px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.7px;line-height:1.3}
+h1 .c1{color:var(--pp)} h1 .c2{color:var(--or)}
+.lead{color:var(--sub);font-size:14.5px;margin:0 0 22px}
+h2{font-size:17px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+.pill{background:linear-gradient(145deg,#9B6BFF,var(--pp-d));color:#fff;border-radius:99px;
+  font-size:11.5px;padding:3px 10px;font-weight:700;flex:0 0 auto}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);
+  padding:22px;margin-bottom:18px;animation:up .45s cubic-bezier(.2,.8,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.btn{font:inherit;font-size:15px;font-weight:700;color:#fff;cursor:pointer;border:none;border-radius:99px;
+  padding:13px 22px;background:linear-gradient(145deg,#9B6BFF,var(--pp-d));
+  box-shadow:0 7px 18px rgba(99,54,224,.3);transition:.18s cubic-bezier(.2,.8,.3,1);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 13px 26px rgba(99,54,224,.4)}
+.btn:active:not(:disabled){transform:none}
+.btn:disabled{opacity:.42;cursor:default;box-shadow:none}
+.btn.ghost{background:#fff;color:var(--pp-d);border:1.6px solid var(--pp-l);box-shadow:0 4px 12px rgba(99,54,224,.08)}
+.btn.ghost:hover:not(:disabled){border-color:var(--pp);box-shadow:0 10px 20px rgba(99,54,224,.15)}
+.btn.warm{background:linear-gradient(145deg,#FFC178,#FF9F43);color:#6B3A00;box-shadow:0 7px 18px rgba(255,159,67,.3)}
+.btn.sm{font-size:13.5px;padding:9px 16px}
+.btn.block{width:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+label.fld{display:block;font-size:12.5px;color:var(--sub);margin:0 0 5px;font-weight:600}
+input[type=text],input[type=number],select{font:inherit;padding:11px 14px;border:1.6px solid var(--line);
+  border-radius:var(--r2);background:#FCFBFF;transition:.15s;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--pp);background:#fff;box-shadow:0 0 0 4px rgba(124,77,255,.1)}
+input[type=range]{width:100%;accent-color:var(--pp)}
+.chk{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none}
+.chk input{width:18px;height:18px;accent-color:var(--pp)}
+
+.note{font-size:12.5px;color:var(--sub);line-height:1.7}
+.alert{border-radius:var(--r2);padding:12px 15px;font-size:13.5px;line-height:1.65;margin-top:13px}
+.alert.err{background:var(--rd-l);color:#B23A28}
+.alert.ok{background:var(--gr-l);color:#17804F}
+.alert.info{background:var(--pp-xl);color:var(--pp-d)}
+.alert.warn{background:var(--yl-l);color:#8A6200}
+.hidden{display:none !important}
+
+.scroll{overflow:auto;border-radius:var(--r2);border:1px solid var(--line);background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{background:var(--pp-xl);font-weight:700;position:sticky;top:0;z-index:2}
+tbody th{background:#fff;position:sticky;left:0;text-align:left;font-weight:700;z-index:1}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+td.diag{background:var(--gr-l);font-weight:800;color:var(--gr)}
+td.miss{background:var(--rd-l);color:var(--rd);font-weight:700}
+td.zero{color:#C3CAD8}
+tr.reco{background:var(--yl-l)}
+tr.reco td,tr.reco th{font-weight:800}
+.tag{display:inline-block;border-radius:99px;padding:2px 10px;font-size:11.5px;font-weight:700}
+.tag.g{background:var(--gr-l);color:#17804F} .tag.y{background:var(--yl-l);color:#8A6200}
+.tag.p{background:var(--pp-l);color:var(--pp-d)} .tag.r{background:var(--rd-l);color:#B23A28}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:13px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;box-shadow:var(--sh)}
+.tile b{display:block;font-size:27px;line-height:1.15;letter-spacing:-1px}
+.tile span{font-size:12.5px;color:var(--sub)}
+.tile.good b{color:var(--gr)} .tile.bad b{color:var(--rd)} .tile.hold b{color:#C98A1E}
+
+.loader{width:34px;height:34px;border:3.5px solid var(--pp-l);border-top-color:var(--pp);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{height:9px;background:#EFEAFA;border-radius:99px;overflow:hidden;margin:13px 0 5px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--pp),#9B6BFF);transition:width .2s}
+
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:13px}
+.gcard{background:#fff;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
+  box-shadow:var(--sh);transition:.2s}
+.gcard:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.gcard img{width:100%;aspect-ratio:1;object-fit:contain;background:#F5F3FC;display:block}
+.gmeta{padding:9px 11px;font-size:12.5px;line-height:1.65;text-align:left}
+.gmeta .t{color:var(--sub);word-break:break-all}
+.gmeta .a{color:var(--gr);font-weight:700}
+.gmeta .p{color:var(--rd);font-weight:700}
+.gmeta .pr{color:var(--sub);font-size:11.5px}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:720px){.pair{grid-template-columns:1fr}}
+.shot{border-radius:var(--r2);overflow:hidden;border:1px solid var(--line);background:#F5F3FC}
+.shot canvas{width:100%;display:block}
+.capt{font-size:12.5px;color:var(--sub);text-align:center;margin-top:7px}
+.kern{display:grid;grid-template-columns:repeat(3,62px);gap:7px;justify-content:center;margin:4px 0 2px}
+.kern input{text-align:center;padding:10px 4px;font-variant-numeric:tabular-nums;font-weight:700}
+.presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.presets button{width:100%}
+.calc{background:#FBFAFF;border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;margin-top:14px}
+.calc .eq{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.9;
+  color:var(--sub);word-break:break-all}
+.calc .res{font-size:19px;font-weight:800;color:var(--pp-d);margin-top:7px}
+.patch{display:grid;grid-template-columns:repeat(3,42px);gap:4px;justify-content:center;margin-top:9px}
+.patch span{display:grid;place-items:center;height:42px;border-radius:9px;font-size:12.5px;font-weight:700;
+  background:var(--pp-l);color:var(--pp-d)}
+</style>
+</head>
+<body>
+<header class="top"><div class="hbar">
+  <div class="mark">🧮</div>
+  <div><b>필터 체험기</b><small>우유왕 출석 · 10주차 실습</small></div>
+  <div class="sp"></div>
+  <button class="btn ghost sm" onclick="location.href='tools.html'">← 도구 모음</button>
+</div></header>
+
+<div class="wrap">
+  <h1>🧮 필터 체험기</h1>
+  <p class="lead">3×3 필터를 사진에 대고 한 칸씩 계산하면 무엇이 보이는지 확인합니다. 모델은 이런 필터를 층층이 쌓아 씁니다.</p>
+
+  <section class="card">
+    <h2><span class="pill">1</span> 사진 넣기</h2>
+    <div class="row">
+      <button class="btn" id="btnPick">🖼️ 사진 고르기</button>
+      <input type="file" id="file" accept="image/*" class="hidden">
+      <label class="chk"><input type="checkbox" id="gray" checked> 회색조로 먼저 바꾸기</label>
+    </div>
+    <p class="note" style="margin-top:10px">사진이 없으면 연습용 그림으로 시작합니다. 사진은 브라우저 밖으로 나가지 않습니다.</p>
+  </section>
+
+  <section class="card">
+    <h2><span class="pill">2</span> 필터 고르기</h2>
+    <div class="presets">
+      <button class="btn ghost sm" data-k="blur">흐림 (9칸 평균)</button>
+      <button class="btn ghost sm" data-k="edge">경계 (모든 방향)</button>
+      <button class="btn ghost sm" data-k="sobelx">세로선 찾기</button>
+      <button class="btn ghost sm" data-k="sobely">가로선 찾기</button>
+      <button class="btn ghost sm" data-k="sharp">선명하게</button>
+      <button class="btn ghost sm" data-k="ident">그대로</button>
+    </div>
+    <div class="kern" id="kern" style="margin-top:16px"></div>
+    <p class="note" style="text-align:center">숫자를 직접 고쳐도 됩니다. 아홉 칸을 자리끼리 곱해서 더한 값이 가운데 칸의 새 값이 됩니다.</p>
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <label class="chk"><input type="checkbox" id="norm" checked> 합으로 나누기(평균 내기)</label>
+      <label class="chk"><input type="checkbox" id="abs"> 음수는 절댓값으로</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="pill">3</span> 결과</h2>
+    <div class="pair">
+      <div><div class="shot"><canvas id="cvIn"></canvas></div><div class="capt">넣은 사진</div></div>
+      <div><div class="shot"><canvas id="cvOut"></canvas></div><div class="capt">필터를 지나온 사진</div></div>
+    </div>
+    <div class="calc">
+      <b style="font-size:14.5px">한 칸 계산 들여다보기</b>
+      <div class="note" style="margin:6px 0 2px">사진 가운데의 3×3 한 자리를 꺼내 계산한 것입니다.</div>
+      <div class="patch" id="patch"></div>
+      <div class="eq" id="eq"></div>
+      <div class="res" id="res"></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn ghost" id="btnPng">🖼️ 결과 그림 저장</button>
+    </div>
+  </section>
+</div>
+
+<!-- 티처블 머신이 준 script 태그. 버전을 바꾸지 않는다. -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/custom-teachablemachine-image.min.js"></script>
+<script>
+
+/* =====================================================================
+   공통 부분 — 일곱 화면이 똑같이 쓰는 함수들
+   · 사진은 브라우저 밖으로 나가지 않는다. 저장도, 로그인도 하지 않는다.
+   · model.json / metadata.json / weights.bin 은 이 파일과 같은 폴더에 둔다.
+   ===================================================================== */
+const MODEL_URL = "./";   // 전역 URL 객체를 가리지 않도록 이름을 따로 쓴다
+const OUT = 224;          // 티처블 머신 입력 한 변의 길이
+const $ = (id) => document.getElementById(id);
+
+function esc(s){ return String(s).replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function msg(host, text, kind){ $(host).innerHTML = '<div class="alert '+(kind||"info")+'">'+text+'</div>'; }
+function clearMsg(host){ $(host).innerHTML = ""; }
+
+/* ── 모델 불러오기 ───────────────────────────────────────────────
+   한 번만 읽어 두고 다시 쓴다. 실패하면 까닭을 그대로 올려 보낸다. */
+let __model = null, __labels = [];
+async function loadModel(){
+  if(__model) return __model;
+  if(typeof tmImage === "undefined")
+    throw new Error("티처블 머신 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");
+  __model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+  __labels = (typeof __model.getClassLabels === "function") ? __model.getClassLabels() : [];
+  return __model;
+}
+function modelLabels(){ return __labels.slice(); }
+
+/* 모델을 못 읽었을 때 늘 같은 안내를 보여 준다 */
+function modelErrorHtml(e){
+  return '<b>모델을 불러오지 못했습니다.</b><br>' +
+    '이 파일을 더블클릭으로 열면 브라우저가 model.json 읽기를 막습니다. ' +
+    '배포 주소(http:// 또는 https://)로 열어 주세요.<br>' +
+    '<span style="opacity:.75">(' + esc(e.message || e) + ')</span>';
+}
+
+/* ── 흰 정사각형에 비율을 지켜 담기 ─────────────────────────────── */
+function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
+  const n = size || OUT;
+  const out = outCanvas || document.createElement("canvas");
+  out.width = out.height = n;
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,n,n);
+  const k = Math.min(n/sw, n/sh), dw = sw*k, dh = sh*k;
+  ctx.drawImage(src, sx, sy, sw, sh, (n-dw)/2, (n-dh)/2, dw, dh);
+  return out;
+}
+
+/* ── 전처리 ───────────────────────────────────────────────────────
+   우유갑 색, 조명, 그림자처럼 글씨와 상관없는 단서를 지우고
+   '글씨 모양'만 남긴다. 7주차 '같은 캔인데 숫자는 다르다',
+   10주차 '지름길 특징'에서 다룬 문제를 입력 단계에서 줄이는 방법.
+     ① 흰 정사각형에 담기  ② 회색조로 바꿔 색 단서를 없애기
+     ③ 크게 흐린 복사본으로 나눠 조명 기울기와 바탕색을 평탄하게
+     ④ S커브로 대비를 올려 글씨만 또렷하게
+   ※ 일곱 화면이 모두 이 함수를 그대로 쓴다. 한 곳이라도 다르면
+      학습·평가·실전의 입력이 어긋나 숫자를 견줄 수 없게 된다. */
+function preprocess(src, sx, sy, sw, sh, outCanvas){
+  const out = fitSquare(src, sx, sy, sw, sh, outCanvas);
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+
+  const im = ctx.getImageData(0,0,OUT,OUT), d = im.data;
+  for(let i=0;i<d.length;i+=4){
+    const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  ctx.putImageData(im,0,0);
+
+  const blur = document.createElement("canvas");
+  blur.width = blur.height = OUT;
+  const bctx = blur.getContext("2d", {willReadFrequently:true});
+  bctx.filter = "blur(14px)"; bctx.drawImage(out,0,0); bctx.filter = "none";
+  const bd = bctx.getImageData(0,0,OUT,OUT).data;
+
+  const cur = ctx.getImageData(0,0,OUT,OUT), cd = cur.data;
+  for(let i=0;i<cd.length;i+=4){
+    const flat = Math.min(255, cd[i]/(bd[i]+1)*180);
+    const v = 255/(1+Math.exp(-(flat-138)/13));
+    cd[i]=cd[i+1]=cd[i+2]=v; cd[i+3]=255;
+  }
+  ctx.putImageData(cur,0,0);
+  return out;
+}
+
+/* 전처리 켜짐/꺼짐에 따라 모델에 넣을 캔버스를 만든다 */
+function makeInput(src, usePrep, outCanvas){
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  return usePrep ? preprocess(src, 0, 0, w, h, outCanvas)
+                 : fitSquare(src, 0, 0, w, h, outCanvas);
+}
+
+/* ── 파일 이름에서 정답 클래스 읽기 ─────────────────────────────
+   첫 밑줄 앞부분. 예) can_01.jpg → can, 아두_03.png → 아두
+   폴더째 넣은 경우에는 상위 폴더 이름을 먼저 본다. */
+function labelFromFile(file){
+  const path = file.webkitRelativePath || "";
+  if(path.indexOf("/") >= 0){
+    const parts = path.split("/");
+    if(parts.length >= 2) return parts[parts.length-2].trim();
+  }
+  const stem = file.name.replace(/\.[^.]+$/, "");
+  const i = stem.indexOf("_");
+  return (i > 0 ? stem.slice(0,i) : stem).trim();
+}
+
+/* 파일 하나를 이미지로 읽기 */
+function readImage(file){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error(file.name + " 를 열 수 없습니다")); };
+    img.src = url;
+  });
+}
+
+/* 가장 확률이 높은 클래스 고르기 */
+function topOf(pred){ return pred.reduce((a,b)=> a.probability > b.probability ? a : b); }
+
+/* ── 내려받기 ──────────────────────────────────────────────────── */
+function downloadBlob(blob, filename){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+/* 엑셀·한글에서 한글이 깨지지 않도록 BOM 을 앞에 붙인다 */
+function downloadCsv(rows, filename){
+  const q = v => '"' + String(v).replace(/"/g,'""') + '"';
+  const body = rows.map(r => Array.isArray(r) ? r.map(q).join(",") : r).join("\r\n");
+  downloadBlob(new Blob(["﻿"+body], {type:"text/csv;charset=utf-8;"}), filename);
+}
+function stamp(){ return new Date().toISOString().slice(0,10); }
+
+/* 캔버스를 PNG 로 저장 */
+function downloadCanvas(canvas, filename){
+  canvas.toBlob(b => downloadBlob(b, filename), "image/png");
+}
+
+
+/* =====================================================================
+   3×3 필터 체험기 (10주차)
+   필터를 한 자리에 대고 자리끼리 곱해서 더하면 그 자리의 새 값이 된다.
+   필터가 보는 것은 밝기 '차이'다. 그래서 조명이 바뀌면 결과도 바뀐다.
+   ===================================================================== */
+const PRESETS = {
+  blur:   [1,1,1, 1,1,1, 1,1,1],
+  edge:   [0,-1,0, -1,4,-1, 0,-1,0],
+  sobelx: [-1,0,1, -2,0,2, -1,0,1],
+  sobely: [-1,-2,-1, 0,0,0, 1,2,1],
+  sharp:  [0,-1,0, -1,5,-1, 0,-1,0],
+  ident:  [0,0,0, 0,1,0, 0,0,0]
+};
+let K = PRESETS.blur.slice();
+let srcCanvas = null;
+
+/* 필터 칸 아홉 개를 그린다 */
+function drawKernel(){
+  $("kern").innerHTML = K.map((v,i)=>
+    '<input type="number" step="0.5" value="'+v+'" data-i="'+i+'">').join("");
+  $("kern").querySelectorAll("input").forEach(el => el.addEventListener("input", ()=>{
+    K[+el.dataset.i] = parseFloat(el.value) || 0;
+    apply();
+  }));
+}
+
+/* 연습용 그림 — 사진이 없을 때 */
+function demoImage(){
+  const c = document.createElement("canvas");
+  c.width = c.height = 320;
+  const x = c.getContext("2d");
+  x.fillStyle = "#F2EFFA"; x.fillRect(0,0,320,320);
+  x.fillStyle = "#6336E0"; x.fillRect(40,60,110,200);
+  x.fillStyle = "#FFC53D"; x.beginPath(); x.arc(225,120,56,0,Math.PI*2); x.fill();
+  x.strokeStyle = "#2A2440"; x.lineWidth = 9;
+  x.beginPath(); x.moveTo(175,235); x.lineTo(290,235); x.stroke();
+  x.fillStyle = "#22C07D"; x.fillRect(180,262,110,34);
+  return c;
+}
+
+function setSource(canvasOrImg){
+  const w = canvasOrImg.naturalWidth || canvasOrImg.width;
+  const h = canvasOrImg.naturalHeight || canvasOrImg.height;
+  const scale = Math.min(1, 420/Math.max(w,h));
+  const c = document.createElement("canvas");
+  c.width = Math.round(w*scale); c.height = Math.round(h*scale);
+  const x = c.getContext("2d", {willReadFrequently:true});
+  x.drawImage(canvasOrImg, 0, 0, c.width, c.height);
+  if($("gray").checked){
+    const im = x.getImageData(0,0,c.width,c.height), d = im.data;
+    for(let i=0;i<d.length;i+=4){
+      const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
+      d[i]=d[i+1]=d[i+2]=g;
+    }
+    x.putImageData(im,0,0);
+  }
+  srcCanvas = c;
+  apply();
+}
+
+/* ── 합성곱 ──────────────────────────────────────────────────── */
+function apply(){
+  if(!srcCanvas) return;
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const sx = srcCanvas.getContext("2d", {willReadFrequently:true});
+  const S = sx.getImageData(0,0,w,h).data;
+
+  const inC = $("cvIn"); inC.width = w; inC.height = h;
+  inC.getContext("2d").drawImage(srcCanvas,0,0);
+
+  const outC = $("cvOut"); outC.width = w; outC.height = h;
+  const ox = outC.getContext("2d");
+  const O = ox.createImageData(w,h), D = O.data;
+
+  let sum = K.reduce((a,b)=>a+b,0);
+  const divide = $("norm").checked && Math.abs(sum) > 0.0001 ? sum : 1;
+  const useAbs = $("abs").checked;
+
+  for(let y=0;y<h;y++){
+    for(let x2=0;x2<w;x2++){
+      let acc0=0, acc1=0, acc2=0;
+      for(let ky=-1;ky<=1;ky++){
+        for(let kx=-1;kx<=1;kx++){
+          const yy = Math.min(h-1, Math.max(0, y+ky));
+          const xx = Math.min(w-1, Math.max(0, x2+kx));
+          const k = K[(ky+1)*3 + (kx+1)];
+          const p = (yy*w+xx)*4;
+          acc0 += S[p]*k; acc1 += S[p+1]*k; acc2 += S[p+2]*k;
+        }
+      }
+      let v0 = acc0/divide, v1 = acc1/divide, v2 = acc2/divide;
+      if(useAbs){ v0=Math.abs(v0); v1=Math.abs(v1); v2=Math.abs(v2); }
+      const o = (y*w+x2)*4;
+      D[o]   = Math.max(0, Math.min(255, v0));
+      D[o+1] = Math.max(0, Math.min(255, v1));
+      D[o+2] = Math.max(0, Math.min(255, v2));
+      D[o+3] = 255;
+    }
+  }
+  ox.putImageData(O,0,0);
+  showOneCell(S, w, h, divide, useAbs);
+}
+
+/* 사진 가운데 한 자리를 꺼내 계산 과정을 숫자로 보여 준다 */
+function showOneCell(S, w, h, divide, useAbs){
+  const cx = w>>1, cy = h>>1;
+  const vals = [], terms = [];
+  let acc = 0;
+  for(let ky=-1;ky<=1;ky++){
+    for(let kx=-1;kx<=1;kx++){
+      const p = ((cy+ky)*w + (cx+kx))*4;
+      const g = Math.round(S[p]*0.299 + S[p+1]*0.587 + S[p+2]*0.114);
+      const k = K[(ky+1)*3 + (kx+1)];
+      vals.push(g); terms.push(g+"×"+k);
+      acc += g*k;
+    }
+  }
+  let out = acc/divide;
+  if(useAbs) out = Math.abs(out);
+  $("patch").innerHTML = vals.map(v => '<span>'+v+'</span>').join("");
+  $("eq").textContent = terms.join("  +  ") + "  =  " + acc.toFixed(1) +
+    (divide !== 1 ? ("   →   " + acc.toFixed(1) + " ÷ " + divide + " = " + (acc/divide).toFixed(1)) : "");
+  $("res").textContent = "가운데 칸의 새 값 = " + Math.max(0, Math.min(255, out)).toFixed(0);
+}
+
+/* ── 버튼 ────────────────────────────────────────────────────── */
+document.querySelectorAll("[data-k]").forEach(b => b.onclick = ()=>{
+  K = PRESETS[b.dataset.k].slice();
+  $("norm").checked = (b.dataset.k === "blur");
+  $("abs").checked  = (b.dataset.k === "sobelx" || b.dataset.k === "sobely" || b.dataset.k === "edge");
+  drawKernel(); apply();
+});
+$("btnPick").onclick = ()=> $("file").click();
+$("file").addEventListener("change", async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  setSource(await readImage(f));
+  e.target.value = "";
+});
+$("gray").addEventListener("change", ()=>{ if(srcCanvas) setSource(srcCanvas); });
+$("norm").addEventListener("change", apply);
+$("abs").addEventListener("change", apply);
+$("btnPng").onclick = ()=> downloadCanvas($("cvOut"), "필터결과_"+stamp()+".png");
+
+drawKernel();
+setSource(demoImage());
+
+</script>
+</body>
+</html>

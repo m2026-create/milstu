@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교사용 일괄 평가</title>
+<style>
+:root{
+  --pp:#7C4DFF; --pp-d:#6336E0; --pp-l:#EFE9FF; --pp-xl:#F8F5FF;
+  --or:#FF9F43; --or-l:#FFF1E2; --bl:#4A9BFF; --bl-l:#E6F1FF;
+  --gr:#22C07D; --gr-l:#E3F8EF; --rd:#F2614F; --rd-l:#FDECE9;
+  --yl:#FFC53D; --yl-l:#FFF6DF;
+  --ink:#2A2440; --sub:#7A7591; --line:#ECE8F6;
+  --r:24px; --r2:18px; --r3:12px;
+  --sh:0 8px 26px rgba(95,70,180,.10), 0 2px 6px rgba(95,70,180,.05);
+  --sh2:0 16px 40px rgba(95,70,180,.18);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{min-height:100vh;color:var(--ink);font-size:15px;line-height:1.6;
+  font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  background:linear-gradient(180deg,#F7F4FF 0%,#FDFCFF 38%,#FFFFFF 100%);
+  position:relative;overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none}
+body::before{width:440px;height:440px;background:rgba(150,110,255,.18);top:-170px;left:-140px}
+body::after{width:380px;height:380px;background:rgba(255,190,100,.18);bottom:-150px;right:-120px}
+
+header.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.93);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.hbar{max-width:1060px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:12px}
+.hbar .mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;
+  background:linear-gradient(145deg,#9B6BFF,#6336E0);box-shadow:0 6px 16px rgba(99,54,224,.32);flex:0 0 auto}
+.hbar b{font-size:16px;letter-spacing:-.3px;display:block;line-height:1.25}
+.hbar small{font-size:11.5px;color:var(--sub)}
+.hbar .sp{flex:1}
+
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:26px 18px 60px}
+.narrow{max-width:540px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.7px;line-height:1.3}
+h1 .c1{color:var(--pp)} h1 .c2{color:var(--or)}
+.lead{color:var(--sub);font-size:14.5px;margin:0 0 22px}
+h2{font-size:17px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+.pill{background:linear-gradient(145deg,#9B6BFF,var(--pp-d));color:#fff;border-radius:99px;
+  font-size:11.5px;padding:3px 10px;font-weight:700;flex:0 0 auto}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);
+  padding:22px;margin-bottom:18px;animation:up .45s cubic-bezier(.2,.8,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.btn{font:inherit;font-size:15px;font-weight:700;color:#fff;cursor:pointer;border:none;border-radius:99px;
+  padding:13px 22px;background:linear-gradient(145deg,#9B6BFF,var(--pp-d));
+  box-shadow:0 7px 18px rgba(99,54,224,.3);transition:.18s cubic-bezier(.2,.8,.3,1);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 13px 26px rgba(99,54,224,.4)}
+.btn:active:not(:disabled){transform:none}
+.btn:disabled{opacity:.42;cursor:default;box-shadow:none}
+.btn.ghost{background:#fff;color:var(--pp-d);border:1.6px solid var(--pp-l);box-shadow:0 4px 12px rgba(99,54,224,.08)}
+.btn.ghost:hover:not(:disabled){border-color:var(--pp);box-shadow:0 10px 20px rgba(99,54,224,.15)}
+.btn.warm{background:linear-gradient(145deg,#FFC178,#FF9F43);color:#6B3A00;box-shadow:0 7px 18px rgba(255,159,67,.3)}
+.btn.sm{font-size:13.5px;padding:9px 16px}
+.btn.block{width:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+label.fld{display:block;font-size:12.5px;color:var(--sub);margin:0 0 5px;font-weight:600}
+input[type=text],input[type=number],select{font:inherit;padding:11px 14px;border:1.6px solid var(--line);
+  border-radius:var(--r2);background:#FCFBFF;transition:.15s;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--pp);background:#fff;box-shadow:0 0 0 4px rgba(124,77,255,.1)}
+input[type=range]{width:100%;accent-color:var(--pp)}
+.chk{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none}
+.chk input{width:18px;height:18px;accent-color:var(--pp)}
+
+.note{font-size:12.5px;color:var(--sub);line-height:1.7}
+.alert{border-radius:var(--r2);padding:12px 15px;font-size:13.5px;line-height:1.65;margin-top:13px}
+.alert.err{background:var(--rd-l);color:#B23A28}
+.alert.ok{background:var(--gr-l);color:#17804F}
+.alert.info{background:var(--pp-xl);color:var(--pp-d)}
+.alert.warn{background:var(--yl-l);color:#8A6200}
+.hidden{display:none !important}
+
+.scroll{overflow:auto;border-radius:var(--r2);border:1px solid var(--line);background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{background:var(--pp-xl);font-weight:700;position:sticky;top:0;z-index:2}
+tbody th{background:#fff;position:sticky;left:0;text-align:left;font-weight:700;z-index:1}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+td.diag{background:var(--gr-l);font-weight:800;color:var(--gr)}
+td.miss{background:var(--rd-l);color:var(--rd);font-weight:700}
+td.zero{color:#C3CAD8}
+tr.reco{background:var(--yl-l)}
+tr.reco td,tr.reco th{font-weight:800}
+.tag{display:inline-block;border-radius:99px;padding:2px 10px;font-size:11.5px;font-weight:700}
+.tag.g{background:var(--gr-l);color:#17804F} .tag.y{background:var(--yl-l);color:#8A6200}
+.tag.p{background:var(--pp-l);color:var(--pp-d)} .tag.r{background:var(--rd-l);color:#B23A28}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:13px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;box-shadow:var(--sh)}
+.tile b{display:block;font-size:27px;line-height:1.15;letter-spacing:-1px}
+.tile span{font-size:12.5px;color:var(--sub)}
+.tile.good b{color:var(--gr)} .tile.bad b{color:var(--rd)} .tile.hold b{color:#C98A1E}
+
+.loader{width:34px;height:34px;border:3.5px solid var(--pp-l);border-top-color:var(--pp);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{height:9px;background:#EFEAFA;border-radius:99px;overflow:hidden;margin:13px 0 5px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--pp),#9B6BFF);transition:width .2s}
+
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:13px}
+.gcard{background:#fff;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
+  box-shadow:var(--sh);transition:.2s}
+.gcard:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.gcard img{width:100%;aspect-ratio:1;object-fit:contain;background:#F5F3FC;display:block}
+.gmeta{padding:9px 11px;font-size:12.5px;line-height:1.65;text-align:left}
+.gmeta .t{color:var(--sub);word-break:break-all}
+.gmeta .a{color:var(--gr);font-weight:700}
+.gmeta .p{color:var(--rd);font-weight:700}
+.gmeta .pr{color:var(--sub);font-size:11.5px}
+
+td.diag{background:var(--gr-l);font-weight:800;color:#17804F}
+.cmwrap{max-height:520px}
+.legendrow{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);margin-top:10px}
+.legendrow i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-2px}
+</style>
+</head>
+<body>
+<header class="top"><div class="hbar">
+  <div class="mark">📊</div>
+  <div><b>교사용 일괄 평가</b><small>우유왕 출석 · 7~9주차</small></div>
+  <div class="sp"></div>
+  <button class="btn ghost sm" onclick="location.href='tools.html'">← 도구 모음</button>
+</div></header>
+
+<div class="wrap">
+  <h1>📊 교사용 일괄 평가</h1>
+  <p class="lead">테스트 사진을 한꺼번에 넣어 모델이 무엇을 무엇으로 헷갈리는지 봅니다. 사진은 이 브라우저 밖으로 나가지 않습니다.</p>
+
+  <section class="card">
+    <h2><span class="pill">1</span> 사진 넣기</h2>
+    <div class="row">
+      <button class="btn" id="btnPick">📁 사진 고르기</button>
+      <input type="file" id="files" accept="image/*" multiple class="hidden">
+      <button class="btn ghost" id="btnDir">📂 폴더째 넣기</button>
+      <input type="file" id="dirs" webkitdirectory directory multiple class="hidden">
+      <div style="flex:0 0 120px"><label class="fld">기준값</label>
+        <input type="number" id="thr" min="0" max="1" step="0.05" value="0.70"></div>
+      <label class="chk" style="padding-top:18px"><input type="checkbox" id="usePrep" checked> 전처리 적용</label>
+    </div>
+    <p class="note" style="margin-top:11px">
+      정답은 <b>파일 이름의 첫 밑줄 앞</b>에서 읽습니다. 예) <code>아두_01.jpg</code> → <b>아두</b>. 폴더째 넣으면 폴더 이름을 봅니다.<br>
+      <b>어느 묶음을 넣었는지 적어 두세요.</b> 고정 개발용은 여러 번 써도 되지만, <b>최종 테스트용은 모델을 정한 뒤 한 번만</b> 씁니다.
+    </p>
+    <div id="pickMsg"></div>
+    <div id="prog" class="hidden"><div class="bar"><i id="progBar"></i></div><div class="note" id="progTxt"></div></div>
+  </section>
+
+  <section class="card hidden" id="cSum">
+    <h2><span class="pill">2</span> 전체 결과</h2>
+    <div class="tiles" id="tiles"></div>
+    <div id="warnBox"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn warm" id="btnCsv">⬇️ 결과 CSV</button>
+      <button class="btn ghost" id="btnReset">초기화</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="cRec">
+    <h2><span class="pill">3</span> 클래스별 정분류율(재현율)과 정밀도</h2>
+    <div class="scroll"><table id="tblRec"></table></div>
+    <p class="note" style="margin-top:11px">
+      <b>재현율</b>은 가로로 읽습니다 — 그 클래스 사진 중 몇 장을 맞혔나. 낮으면 <b>그 클래스 데이터를 더 모읍니다</b>.<br>
+      <b>정밀도</b>는 세로로 읽습니다 — 그 클래스라고 답한 것 중 몇 장이 맞았나. 낮으면 <b>다른 클래스가 흘러들어오고 있습니다</b>.
+    </p>
+  </section>
+
+  <section class="card hidden" id="cCm">
+    <h2><span class="pill">4</span> 혼동행렬 <span class="note" style="font-weight:400">행 = 실제 · 열 = 예측</span></h2>
+    <div class="scroll cmwrap"><table id="tblCm"></table></div>
+    <div class="legendrow">
+      <span><i style="background:var(--gr-l)"></i>대각선 = 맞힌 개수</span>
+      <span><i style="background:var(--rd-l)"></i>그 밖 = 무엇을 무엇으로 헷갈렸는지</span>
+    </div>
+  </section>
+
+  <section class="card hidden" id="cErr">
+    <h2><span class="pill">5</span> 틀린 사진 모아보기 <span class="note" style="font-weight:400" id="errCnt"></span></h2>
+    <p class="note" style="margin-bottom:12px">확신하고 틀린 것부터 나옵니다. 여기서 고른 3장을
+      <b>occlude.html</b>(가리기 실험기)에 넣어 모델이 어디를 보고 그렇게 판정했는지 확인하세요.</p>
+    <div class="gal" id="gal"></div>
+  </section>
+</div>
+
+<!-- 티처블 머신이 준 script 태그. 버전을 바꾸지 않는다. -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/custom-teachablemachine-image.min.js"></script>
+<script>
+
+/* =====================================================================
+   공통 부분 — 일곱 화면이 똑같이 쓰는 함수들
+   · 사진은 브라우저 밖으로 나가지 않는다. 저장도, 로그인도 하지 않는다.
+   · model.json / metadata.json / weights.bin 은 이 파일과 같은 폴더에 둔다.
+   ===================================================================== */
+const MODEL_URL = "./";   // 전역 URL 객체를 가리지 않도록 이름을 따로 쓴다
+const OUT = 224;          // 티처블 머신 입력 한 변의 길이
+const $ = (id) => document.getElementById(id);
+
+function esc(s){ return String(s).replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function msg(host, text, kind){ $(host).innerHTML = '<div class="alert '+(kind||"info")+'">'+text+'</div>'; }
+function clearMsg(host){ $(host).innerHTML = ""; }
+
+/* ── 모델 불러오기 ───────────────────────────────────────────────
+   한 번만 읽어 두고 다시 쓴다. 실패하면 까닭을 그대로 올려 보낸다. */
+let __model = null, __labels = [];
+async function loadModel(){
+  if(__model) return __model;
+  if(typeof tmImage === "undefined")
+    throw new Error("티처블 머신 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");
+  __model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+  __labels = (typeof __model.getClassLabels === "function") ? __model.getClassLabels() : [];
+  return __model;
+}
+function modelLabels(){ return __labels.slice(); }
+
+/* 모델을 못 읽었을 때 늘 같은 안내를 보여 준다 */
+function modelErrorHtml(e){
+  return '<b>모델을 불러오지 못했습니다.</b><br>' +
+    '이 파일을 더블클릭으로 열면 브라우저가 model.json 읽기를 막습니다. ' +
+    '배포 주소(http:// 또는 https://)로 열어 주세요.<br>' +
+    '<span style="opacity:.75">(' + esc(e.message || e) + ')</span>';
+}
+
+/* ── 흰 정사각형에 비율을 지켜 담기 ─────────────────────────────── */
+function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
+  const n = size || OUT;
+  const out = outCanvas || document.createElement("canvas");
+  out.width = out.height = n;
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,n,n);
+  const k = Math.min(n/sw, n/sh), dw = sw*k, dh = sh*k;
+  ctx.drawImage(src, sx, sy, sw, sh, (n-dw)/2, (n-dh)/2, dw, dh);
+  return out;
+}
+
+/* ── 전처리 ───────────────────────────────────────────────────────
+   우유갑 색, 조명, 그림자처럼 글씨와 상관없는 단서를 지우고
+   '글씨 모양'만 남긴다. 7주차 '같은 캔인데 숫자는 다르다',
+   10주차 '지름길 특징'에서 다룬 문제를 입력 단계에서 줄이는 방법.
+     ① 흰 정사각형에 담기  ② 회색조로 바꿔 색 단서를 없애기
+     ③ 크게 흐린 복사본으로 나눠 조명 기울기와 바탕색을 평탄하게
+     ④ S커브로 대비를 올려 글씨만 또렷하게
+   ※ 일곱 화면이 모두 이 함수를 그대로 쓴다. 한 곳이라도 다르면
+      학습·평가·실전의 입력이 어긋나 숫자를 견줄 수 없게 된다. */
+function preprocess(src, sx, sy, sw, sh, outCanvas){
+  const out = fitSquare(src, sx, sy, sw, sh, outCanvas);
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+
+  const im = ctx.getImageData(0,0,OUT,OUT), d = im.data;
+  for(let i=0;i<d.length;i+=4){
+    const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  ctx.putImageData(im,0,0);
+
+  const blur = document.createElement("canvas");
+  blur.width = blur.height = OUT;
+  const bctx = blur.getContext("2d", {willReadFrequently:true});
+  bctx.filter = "blur(14px)"; bctx.drawImage(out,0,0); bctx.filter = "none";
+  const bd = bctx.getImageData(0,0,OUT,OUT).data;
+
+  const cur = ctx.getImageData(0,0,OUT,OUT), cd = cur.data;
+  for(let i=0;i<cd.length;i+=4){
+    const flat = Math.min(255, cd[i]/(bd[i]+1)*180);
+    const v = 255/(1+Math.exp(-(flat-138)/13));
+    cd[i]=cd[i+1]=cd[i+2]=v; cd[i+3]=255;
+  }
+  ctx.putImageData(cur,0,0);
+  return out;
+}
+
+/* 전처리 켜짐/꺼짐에 따라 모델에 넣을 캔버스를 만든다 */
+function makeInput(src, usePrep, outCanvas){
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  return usePrep ? preprocess(src, 0, 0, w, h, outCanvas)
+                 : fitSquare(src, 0, 0, w, h, outCanvas);
+}
+
+/* ── 파일 이름에서 정답 클래스 읽기 ─────────────────────────────
+   첫 밑줄 앞부분. 예) can_01.jpg → can, 아두_03.png → 아두
+   폴더째 넣은 경우에는 상위 폴더 이름을 먼저 본다. */
+function labelFromFile(file){
+  const path = file.webkitRelativePath || "";
+  if(path.indexOf("/") >= 0){
+    const parts = path.split("/");
+    if(parts.length >= 2) return parts[parts.length-2].trim();
+  }
+  const stem = file.name.replace(/\.[^.]+$/, "");
+  const i = stem.indexOf("_");
+  return (i > 0 ? stem.slice(0,i) : stem).trim();
+}
+
+/* 파일 하나를 이미지로 읽기 */
+function readImage(file){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error(file.name + " 를 열 수 없습니다")); };
+    img.src = url;
+  });
+}
+
+/* 가장 확률이 높은 클래스 고르기 */
+function topOf(pred){ return pred.reduce((a,b)=> a.probability > b.probability ? a : b); }
+
+/* ── 내려받기 ──────────────────────────────────────────────────── */
+function downloadBlob(blob, filename){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+/* 엑셀·한글에서 한글이 깨지지 않도록 BOM 을 앞에 붙인다 */
+function downloadCsv(rows, filename){
+  const q = v => '"' + String(v).replace(/"/g,'""') + '"';
+  const body = rows.map(r => Array.isArray(r) ? r.map(q).join(",") : r).join("\r\n");
+  downloadBlob(new Blob(["﻿"+body], {type:"text/csv;charset=utf-8;"}), filename);
+}
+function stamp(){ return new Date().toISOString().slice(0,10); }
+
+/* 캔버스를 PNG 로 저장 */
+function downloadCanvas(canvas, filename){
+  canvas.toBlob(b => downloadBlob(b, filename), "image/png");
+}
+
+
+/* =====================================================================
+   교사용 일괄 평가 (7주차에서 시작, 9주차에서 재현율·정밀도 추가)
+   사진을 한 장씩 예측해 혼동행렬을 세운다.
+   ===================================================================== */
+let rows = [];     // {file, actual, pred, prob, correct, hold, thumb}
+let labels = [];
+
+async function run(fileList){
+  const files = Array.from(fileList).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(f.name));
+  if(!files.length){ msg("pickMsg","이미지 파일이 없습니다.","err"); return; }
+
+  clearMsg("pickMsg");
+  $("prog").classList.remove("hidden");
+  $("btnPick").disabled = $("btnDir").disabled = true;
+
+  try{ await loadModel(); }
+  catch(e){
+    $("prog").classList.add("hidden");
+    $("btnPick").disabled = $("btnDir").disabled = false;
+    msg("pickMsg", modelErrorHtml(e), "err"); return;
+  }
+  labels = modelLabels();
+
+  const thr = parseFloat($("thr").value) || 0.7;
+  const usePrep = $("usePrep").checked;
+  rows = [];
+
+  for(let i=0;i<files.length;i++){
+    $("progBar").style.width = Math.round(i/files.length*100)+"%";
+    $("progTxt").textContent = (i+1)+" / "+files.length+" 장 예측 중… ("+files[i].name+")";
+    await new Promise(r => requestAnimationFrame(r));   // 화면이 멈춰 보이지 않게 한 번 쉰다
+    try{
+      const img = await readImage(files[i]);
+      const input = makeInput(img, usePrep);
+      const pred = await __model.predict(input);
+      const top = topOf(pred);
+      const actual = labelFromFile(files[i]);
+      rows.push({ file:files[i].name, actual, pred:top.className, prob:top.probability,
+                  correct: top.className === actual, hold: top.probability < thr,
+                  thumb: input.toDataURL("image/jpeg", 0.7) });
+    }catch(e){ console.warn(e); }
+  }
+
+  $("progBar").style.width = "100%";
+  $("progTxt").textContent = "완료 · 총 " + rows.length + "장";
+  $("btnPick").disabled = $("btnDir").disabled = false;
+  draw(thr);
+}
+
+function tile(kind, big, small){
+  return '<div class="tile '+kind+'"><b>'+big+'</b><span>'+small+'</span></div>';
+}
+
+function draw(thr){
+  if(!rows.length) return;
+  const actuals = [...new Set(rows.map(r=>r.actual))];
+  const cols = labels.length ? labels : [...new Set(rows.map(r=>r.pred))];
+  const unknown = actuals.filter(a => cols.indexOf(a) < 0);
+  const rowLabels = [...cols.filter(c => actuals.indexOf(c) >= 0), ...unknown];
+
+  const total = rows.length;
+  const correct = rows.filter(r=>r.correct).length;
+  const held = rows.filter(r=>r.hold).length;
+  const badFirm = rows.filter(r=>!r.correct && !r.hold).length;
+
+  $("tiles").innerHTML =
+    tile("good", (correct/total*100).toFixed(1)+"%", "전체 정확도 ("+correct+"/"+total+")") +
+    tile("", total, "테스트 사진") +
+    tile("bad", total-correct, "틀린 사진") +
+    tile("hold", held, "기준값 "+thr+" 미만 (잘 모르겠어요)") +
+    tile("bad", badFirm, "확신하고 틀린 사진 ⚠️");
+
+  let warn = "";
+  if(unknown.length)
+    warn += '<div class="alert warn"><b>모델에 없는 이름이 섞여 있습니다:</b> ' + esc(unknown.join(", ")) +
+      '<br>파일 이름이 티처블 머신의 클래스 이름과 똑같은지 확인해 주세요. 이 사진들은 맞을 수 없습니다.</div>';
+  if(badFirm)
+    warn += '<div class="alert info"><b>"확신하고 틀린 사진"</b>이 가장 중요한 숫자입니다. ' +
+      '기준값으로 걸러지지 않아 학생 화면에 그대로 틀린 답이 나갑니다.</div>';
+  $("warnBox").innerHTML = warn;
+
+  /* 재현율(가로)과 정밀도(세로) */
+  let h = '<thead><tr><th style="text-align:left">클래스</th><th>사진 수</th><th>맞힘</th>' +
+          '<th>재현율</th><th>그 클래스로 답한 수</th><th>정밀도</th><th>평균 확률</th></tr></thead><tbody>';
+  rowLabels.forEach(L=>{
+    const mine = rows.filter(r=>r.actual===L);
+    const said = rows.filter(r=>r.pred===L);
+    const ok   = mine.filter(r=>r.correct).length;
+    const okP  = said.filter(r=>r.correct).length;
+    if(!mine.length && !said.length) return;
+    const rc = mine.length ? ok/mine.length*100 : null;
+    const pr = said.length ? okP/said.length*100 : null;
+    const avg = mine.length ? mine.reduce((s,r)=>s+r.prob,0)/mine.length*100 : null;
+    const cls = v => v===null ? "" : (v>=90?"g":v>=70?"y":"r");
+    h += '<tr><th>'+esc(L)+'</th><td>'+mine.length+'</td><td>'+ok+'</td>' +
+      '<td>'+(rc===null?'-':'<span class="tag '+cls(rc)+'">'+rc.toFixed(1)+'%</span>')+'</td>' +
+      '<td>'+said.length+'</td>' +
+      '<td>'+(pr===null?'-':'<span class="tag '+cls(pr)+'">'+pr.toFixed(1)+'%</span>')+'</td>' +
+      '<td>'+(avg===null?'-':avg.toFixed(1)+'%')+'</td></tr>';
+  });
+  $("tblRec").innerHTML = h + '</tbody>';
+
+  /* 혼동행렬 */
+  let c = '<thead><tr><th style="text-align:left">실제 \\ 예측</th>';
+  cols.forEach(p => c += '<th>'+esc(p)+'</th>');
+  c += '<th>합계</th></tr></thead><tbody>';
+  rowLabels.forEach(A=>{
+    const mine = rows.filter(r=>r.actual===A);
+    if(!mine.length) return;
+    c += '<tr><th>'+esc(A)+'</th>';
+    cols.forEach(P=>{
+      const n = mine.filter(r=>r.pred===P).length;
+      const cl = (A===P) ? "diag" : (n>0 ? "miss" : "zero");
+      c += '<td class="'+cl+'">'+(n||"·")+'</td>';
+    });
+    c += '<td><b>'+mine.length+'</b></td></tr>';
+  });
+  $("tblCm").innerHTML = c + '</tbody>';
+
+  /* 오답 갤러리 — 확신하고 틀린 것부터 */
+  const errs = rows.filter(r=>!r.correct).sort((a,b)=>b.prob-a.prob);
+  $("errCnt").textContent = errs.length ? "총 "+errs.length+"장" : "";
+  $("gal").innerHTML = errs.length ? errs.map(r =>
+      '<div class="gcard"><img src="'+r.thumb+'" alt="">' +
+      '<div class="gmeta"><div class="t">'+esc(r.file)+'</div>' +
+      '<div>정답 <span class="a">'+esc(r.actual)+'</span></div>' +
+      '<div>예측 <span class="p">'+esc(r.pred)+'</span>' +
+        (r.hold?' <span class="tag y">모르겠어요</span>':'') + '</div>' +
+      '<div class="pr">확률 '+(r.prob*100).toFixed(1)+'%</div></div></div>').join("")
+    : '<div class="note">🎉 틀린 사진이 없습니다.</div>';
+
+  ["cSum","cRec","cCm","cErr"].forEach(id => $(id).classList.remove("hidden"));
+  $("cSum").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ── CSV ─────────────────────────────────────────────────────── */
+function saveCsv(){
+  const thr = parseFloat($("thr").value) || 0.7;
+  const total = rows.length, correct = rows.filter(r=>r.correct).length;
+  const out = [["구분","값"],
+    ["평가 일시", new Date().toLocaleString("ko-KR")],
+    ["전체 사진 수", total], ["맞힌 수", correct],
+    ["전체 정확도(%)", (correct/total*100).toFixed(2)],
+    ["기준값", thr],
+    ["잘 모르겠어요", rows.filter(r=>r.hold).length],
+    ["확신하고 틀린 수", rows.filter(r=>!r.correct && !r.hold).length],
+    ["전처리 적용", $("usePrep").checked ? "예" : "아니오"], []];
+
+  out.push(["클래스","사진 수","맞힘","재현율(%)","그 클래스로 답한 수","정밀도(%)"]);
+  const names = [...new Set(rows.map(r=>r.actual).concat(rows.map(r=>r.pred)))];
+  names.forEach(L=>{
+    const mine = rows.filter(r=>r.actual===L), said = rows.filter(r=>r.pred===L);
+    const ok = mine.filter(r=>r.correct).length, okP = said.filter(r=>r.correct).length;
+    out.push([L, mine.length, ok,
+      mine.length ? (ok/mine.length*100).toFixed(2) : "",
+      said.length, said.length ? (okP/said.length*100).toFixed(2) : ""]);
+  });
+  out.push([]);
+
+  // 혼동행렬도 같이 담는다
+  const cols = labels.length ? labels : names;
+  out.push(["실제 \\ 예측"].concat(cols));
+  names.forEach(A=>{
+    const mine = rows.filter(r=>r.actual===A);
+    if(!mine.length) return;
+    out.push([A].concat(cols.map(P => mine.filter(r=>r.pred===P).length)));
+  });
+  out.push([]);
+
+  out.push(["파일명","실제","예측","확률(%)","정답여부","판정"]);
+  rows.forEach(r => out.push([r.file, r.actual, r.pred, (r.prob*100).toFixed(2),
+    r.correct?"O":"X", r.hold?"잘 모르겠어요":"판정"]));
+  downloadCsv(out, "평가결과_"+stamp()+".csv");
+}
+
+/* ── 버튼 ────────────────────────────────────────────────────── */
+$("btnPick").onclick = ()=> $("files").click();
+$("btnDir").onclick = ()=> $("dirs").click();
+$("files").addEventListener("change", e=>{ run(e.target.files); e.target.value=""; });
+$("dirs").addEventListener("change", e=>{ run(e.target.files); e.target.value=""; });
+$("thr").addEventListener("change", ()=>{
+  if(!rows.length) return;
+  const thr = parseFloat($("thr").value) || 0.7;
+  rows.forEach(r => r.hold = r.prob < thr);     // 기준값만 바뀌면 다시 예측할 필요가 없다
+  draw(thr);
+});
+$("usePrep").addEventListener("change", ()=>{
+  if(rows.length) msg("pickMsg","전처리를 바꿨습니다. 사진을 다시 넣어 주세요.","info");
+});
+$("btnCsv").onclick = saveCsv;
+$("btnReset").onclick = ()=>{
+  rows = [];
+  ["cSum","cRec","cCm","cErr"].forEach(id => $(id).classList.add("hidden"));
+  $("prog").classList.add("hidden"); $("progBar").style.width = "0";
+  clearMsg("pickMsg");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+</script>
+</body>
+</html>

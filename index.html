@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>우유왕 출석</title>
+<style>
+:root{
+  --pp:#7C4DFF; --pp-d:#6336E0; --pp-l:#EFE9FF; --pp-xl:#F8F5FF;
+  --or:#FF9F43; --or-l:#FFF1E2; --bl:#4A9BFF; --bl-l:#E6F1FF;
+  --gr:#22C07D; --gr-l:#E3F8EF; --rd:#F2614F; --rd-l:#FDECE9;
+  --yl:#FFC53D; --yl-l:#FFF6DF;
+  --ink:#2A2440; --sub:#7A7591; --line:#ECE8F6;
+  --r:24px; --r2:18px; --r3:12px;
+  --sh:0 8px 26px rgba(95,70,180,.10), 0 2px 6px rgba(95,70,180,.05);
+  --sh2:0 16px 40px rgba(95,70,180,.18);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{min-height:100vh;color:var(--ink);font-size:15px;line-height:1.6;
+  font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  background:linear-gradient(180deg,#F7F4FF 0%,#FDFCFF 38%,#FFFFFF 100%);
+  position:relative;overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none}
+body::before{width:440px;height:440px;background:rgba(150,110,255,.18);top:-170px;left:-140px}
+body::after{width:380px;height:380px;background:rgba(255,190,100,.18);bottom:-150px;right:-120px}
+
+header.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.93);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.hbar{max-width:1060px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:12px}
+.hbar .mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;
+  background:linear-gradient(145deg,#9B6BFF,#6336E0);box-shadow:0 6px 16px rgba(99,54,224,.32);flex:0 0 auto}
+.hbar b{font-size:16px;letter-spacing:-.3px;display:block;line-height:1.25}
+.hbar small{font-size:11.5px;color:var(--sub)}
+.hbar .sp{flex:1}
+
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:26px 18px 60px}
+.narrow{max-width:540px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.7px;line-height:1.3}
+h1 .c1{color:var(--pp)} h1 .c2{color:var(--or)}
+.lead{color:var(--sub);font-size:14.5px;margin:0 0 22px}
+h2{font-size:17px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+.pill{background:linear-gradient(145deg,#9B6BFF,var(--pp-d));color:#fff;border-radius:99px;
+  font-size:11.5px;padding:3px 10px;font-weight:700;flex:0 0 auto}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);
+  padding:22px;margin-bottom:18px;animation:up .45s cubic-bezier(.2,.8,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.btn{font:inherit;font-size:15px;font-weight:700;color:#fff;cursor:pointer;border:none;border-radius:99px;
+  padding:13px 22px;background:linear-gradient(145deg,#9B6BFF,var(--pp-d));
+  box-shadow:0 7px 18px rgba(99,54,224,.3);transition:.18s cubic-bezier(.2,.8,.3,1);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 13px 26px rgba(99,54,224,.4)}
+.btn:active:not(:disabled){transform:none}
+.btn:disabled{opacity:.42;cursor:default;box-shadow:none}
+.btn.ghost{background:#fff;color:var(--pp-d);border:1.6px solid var(--pp-l);box-shadow:0 4px 12px rgba(99,54,224,.08)}
+.btn.ghost:hover:not(:disabled){border-color:var(--pp);box-shadow:0 10px 20px rgba(99,54,224,.15)}
+.btn.warm{background:linear-gradient(145deg,#FFC178,#FF9F43);color:#6B3A00;box-shadow:0 7px 18px rgba(255,159,67,.3)}
+.btn.sm{font-size:13.5px;padding:9px 16px}
+.btn.block{width:100%}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+label.fld{display:block;font-size:12.5px;color:var(--sub);margin:0 0 5px;font-weight:600}
+input[type=text],input[type=number],select{font:inherit;padding:11px 14px;border:1.6px solid var(--line);
+  border-radius:var(--r2);background:#FCFBFF;transition:.15s;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--pp);background:#fff;box-shadow:0 0 0 4px rgba(124,77,255,.1)}
+input[type=range]{width:100%;accent-color:var(--pp)}
+.chk{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none}
+.chk input{width:18px;height:18px;accent-color:var(--pp)}
+
+.note{font-size:12.5px;color:var(--sub);line-height:1.7}
+.alert{border-radius:var(--r2);padding:12px 15px;font-size:13.5px;line-height:1.65;margin-top:13px}
+.alert.err{background:var(--rd-l);color:#B23A28}
+.alert.ok{background:var(--gr-l);color:#17804F}
+.alert.info{background:var(--pp-xl);color:var(--pp-d)}
+.alert.warn{background:var(--yl-l);color:#8A6200}
+.hidden{display:none !important}
+
+.scroll{overflow:auto;border-radius:var(--r2);border:1px solid var(--line);background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:9px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{background:var(--pp-xl);font-weight:700;position:sticky;top:0;z-index:2}
+tbody th{background:#fff;position:sticky;left:0;text-align:left;font-weight:700;z-index:1}
+tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+td.diag{background:var(--gr-l);font-weight:800;color:var(--gr)}
+td.miss{background:var(--rd-l);color:var(--rd);font-weight:700}
+td.zero{color:#C3CAD8}
+tr.reco{background:var(--yl-l)}
+tr.reco td,tr.reco th{font-weight:800}
+.tag{display:inline-block;border-radius:99px;padding:2px 10px;font-size:11.5px;font-weight:700}
+.tag.g{background:var(--gr-l);color:#17804F} .tag.y{background:var(--yl-l);color:#8A6200}
+.tag.p{background:var(--pp-l);color:var(--pp-d)} .tag.r{background:var(--rd-l);color:#B23A28}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:13px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:15px 17px;box-shadow:var(--sh)}
+.tile b{display:block;font-size:27px;line-height:1.15;letter-spacing:-1px}
+.tile span{font-size:12.5px;color:var(--sub)}
+.tile.good b{color:var(--gr)} .tile.bad b{color:var(--rd)} .tile.hold b{color:#C98A1E}
+
+.loader{width:34px;height:34px;border:3.5px solid var(--pp-l);border-top-color:var(--pp);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{height:9px;background:#EFEAFA;border-radius:99px;overflow:hidden;margin:13px 0 5px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--pp),#9B6BFF);transition:width .2s}
+
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:13px}
+.gcard{background:#fff;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;
+  box-shadow:var(--sh);transition:.2s}
+.gcard:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.gcard img{width:100%;aspect-ratio:1;object-fit:contain;background:#F5F3FC;display:block}
+.gmeta{padding:9px 11px;font-size:12.5px;line-height:1.65;text-align:left}
+.gmeta .t{color:var(--sub);word-break:break-all}
+.gmeta .a{color:var(--gr);font-weight:700}
+.gmeta .p{color:var(--rd);font-weight:700}
+.gmeta .pr{color:var(--sub);font-size:11.5px}
+
+.steps{display:flex;gap:7px;justify-content:center;margin-bottom:18px}
+.steps i{width:28px;height:5px;border-radius:99px;background:var(--pp-l);transition:.25s}
+.steps i.on{background:var(--pp);width:44px}
+#videoWrap{position:relative;border-radius:var(--r2);overflow:hidden;background:#231d38}
+#video{width:100%;display:block;max-height:58vh;object-fit:cover}
+#guide{position:absolute;left:11%;top:50%;width:78%;aspect-ratio:3/2;transform:translateY(-50%);
+  border:3px dashed var(--yl);border-radius:14px;box-shadow:0 0 0 2000px rgba(30,22,60,.3);pointer-events:none}
+#guide span{position:absolute;left:0;right:0;bottom:-29px;text-align:center;color:#fff;font-size:12.5px;
+  text-shadow:0 1px 4px rgba(0,0,0,.65)}
+#flipBtn{position:absolute;top:12px;right:12px;width:46px;height:46px;border-radius:50%;
+  background:rgba(255,255,255,.88);border:none;cursor:pointer;font-size:20px;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);transition:.25s}
+#flipBtn:hover{transform:rotate(180deg) scale(1.06)}
+#cropStage{position:relative;width:100%;border-radius:var(--r2);overflow:hidden;background:#F2EFFA;
+  touch-action:none;user-select:none}
+#cropCanvas{width:100%;display:block}
+#cropBox{position:absolute;border:2.5px solid var(--pp);border-radius:10px;cursor:move;
+  box-shadow:0 0 0 2000px rgba(35,26,66,.45);touch-action:none}
+.hdl{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;
+  background:#fff;border:3px solid var(--pp);box-shadow:0 3px 10px rgba(0,0,0,.26);touch-action:none}
+.prep{display:flex;gap:14px;align-items:center;justify-content:center}
+.prep figure{margin:0;text-align:center}
+.prep canvas{width:112px;height:112px;border-radius:var(--r3);background:#fff;
+  box-shadow:0 4px 14px rgba(95,70,180,.14);display:block}
+.prep figcaption{font-size:11.5px;color:var(--sub);margin-top:6px}
+.arrow-s{font-size:20px;color:var(--pp);opacity:.6}
+
+#result{text-align:center;padding:16px 8px 6px}
+#result.pop{animation:pop .55s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes pop{0%{opacity:0;transform:scale(.82)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+.rIcon{font-size:66px;line-height:1;display:block;margin-bottom:8px;animation:bob 1.9s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.rSay{font-size:30px;font-weight:800;letter-spacing:-.6px;line-height:1.3}
+.rSay em{font-style:normal;color:var(--pp-d);background:linear-gradient(transparent 62%,var(--yl-l) 62%);padding:0 5px}
+.rHint{font-size:17px;color:var(--ink);margin-top:12px;font-weight:600}
+.unsure .rSay{color:var(--rd)}
+.tips{text-align:left;max-width:360px;margin:16px auto 0;display:grid;gap:9px}
+.tips div{background:var(--yl-l);border-radius:var(--r2);padding:11px 15px;font-size:15px;
+  display:flex;gap:10px;align-items:flex-start}
+.tips b{color:#8A6200;flex:0 0 auto}
+.bars{max-width:380px;margin:20px auto 0;display:grid;gap:10px}
+.brow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:14px}
+.brow .nm{text-align:right;font-weight:700;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btrack{height:16px;background:#F0ECFA;border-radius:99px;overflow:hidden}
+.btrack i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#9B6BFF,var(--pp-d));
+  width:0;transition:width .7s cubic-bezier(.2,.8,.3,1)}
+.brow.dim .btrack i{background:#CFC6EA}
+.brow .pc{font-variant-numeric:tabular-nums;color:var(--sub);font-size:13px;min-width:46px;text-align:right}
+.qbox{margin:20px auto 0;max-width:420px;background:var(--bl-l);border-radius:var(--r2);
+  padding:13px 16px;font-size:14.5px;color:#1C5FA8;font-weight:600}
+.footwarn{text-align:center;padding:2px 18px 34px;position:relative;z-index:1}
+.footwarn span{background:#fff;border:1px solid var(--line);border-radius:99px;padding:11px 20px;
+  display:inline-block;font-size:13.5px;color:var(--sub);box-shadow:var(--sh)}
+.crumb{background:none;border:none;font:inherit;color:var(--sub);cursor:pointer;padding:0;
+  font-size:13.5px;margin-bottom:12px;display:inline-flex;gap:5px;align-items:center}
+.crumb:hover{color:var(--pp)}
+</style>
+</head>
+<body>
+<header class="top"><div class="hbar">
+  <div class="mark">🥛</div>
+  <div><b>우유왕 출석</b><small>학생용 화면 v1 · 티처블머신</small></div>
+  <div class="sp"></div>
+  
+</div></header>
+
+<div class="wrap narrow">
+  <div class="steps"><i id="s1" class="on"></i><i id="s2"></i><i id="s3"></i></div>
+
+  <!-- ① 시작 -->
+  <section class="card" id="vStart">
+    <h2 id="appTitle"></h2>
+    <p class="note" id="startLead" style="margin-bottom:16px"></p>
+    <div class="row">
+      <button class="btn" id="btnCam" style="flex:1">📷 사진 찍기</button>
+      <button class="btn warm" id="btnUp" style="flex:1">🖼️ 사진 고르기</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" class="hidden">
+    <div id="startAlert"></div>
+  </section>
+
+  <!-- ② 카메라 -->
+  <section class="card hidden" id="vCam">
+    <div id="videoWrap">
+      <video id="video" playsinline webkit-playsinline muted autoplay></video>
+      <div id="guide"><span>노란 칸에 꽉 차게</span></div>
+      <button id="flipBtn" title="카메라 바꾸기">🔄</button>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn ghost" id="btnCamCancel" style="flex:1">그만두기</button>
+      <button class="btn" id="btnShoot" style="flex:1">📸 찍기</button>
+    </div>
+  </section>
+
+  <!-- ③ 자르기 -->
+  <section class="card hidden" id="vCrop">
+    <button class="crumb" id="btnCropBack">← 다시 찍기</button>
+    <p class="note" style="margin-bottom:11px">보라색 네모를 움직여 <b>볼 것만</b> 감싸 주세요.</p>
+    <div id="cropStage">
+      <canvas id="cropCanvas"></canvas>
+      <div id="cropBox">
+        <div class="hdl" data-h="nw"></div><div class="hdl" data-h="ne"></div>
+        <div class="hdl" data-h="se"></div><div class="hdl" data-h="sw"></div>
+      </div>
+    </div>
+    <div class="prep" id="prepRow" style="margin-top:15px">
+      <figure><canvas id="prevRaw" width="224" height="224"></canvas><figcaption>자른 모습</figcaption></figure>
+      <div class="arrow-s">➜</div>
+      <figure><canvas id="prevPrep" width="224" height="224"></canvas><figcaption>AI가 보는 모습</figcaption></figure>
+    </div>
+    <button class="btn block" id="btnPredict" style="margin-top:15px">✨ 이걸로 물어보기</button>
+  </section>
+
+  <!-- ④ 결과 -->
+  <section class="card hidden" id="vResult">
+    <div id="result"></div>
+    <button class="btn ghost block" id="btnAgain" style="margin-top:14px">다시 하기</button>
+  </section>
+</div>
+
+<div class="footwarn"><span id="footNotice"></span></div>
+
+<!-- 티처블 머신이 준 script 태그. 버전을 바꾸지 않는다. -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/custom-teachablemachine-image.min.js"></script>
+<script>
+
+/* =====================================================================
+   공통 부분 — 일곱 화면이 똑같이 쓰는 함수들
+   · 사진은 브라우저 밖으로 나가지 않는다. 저장도, 로그인도 하지 않는다.
+   · model.json / metadata.json / weights.bin 은 이 파일과 같은 폴더에 둔다.
+   ===================================================================== */
+const MODEL_URL = "./";   // 전역 URL 객체를 가리지 않도록 이름을 따로 쓴다
+const OUT = 224;          // 티처블 머신 입력 한 변의 길이
+const $ = (id) => document.getElementById(id);
+
+function esc(s){ return String(s).replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function msg(host, text, kind){ $(host).innerHTML = '<div class="alert '+(kind||"info")+'">'+text+'</div>'; }
+function clearMsg(host){ $(host).innerHTML = ""; }
+
+/* ── 모델 불러오기 ───────────────────────────────────────────────
+   한 번만 읽어 두고 다시 쓴다. 실패하면 까닭을 그대로 올려 보낸다. */
+let __model = null, __labels = [];
+async function loadModel(){
+  if(__model) return __model;
+  if(typeof tmImage === "undefined")
+    throw new Error("티처블 머신 스크립트를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");
+  __model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+  __labels = (typeof __model.getClassLabels === "function") ? __model.getClassLabels() : [];
+  return __model;
+}
+function modelLabels(){ return __labels.slice(); }
+
+/* 모델을 못 읽었을 때 늘 같은 안내를 보여 준다 */
+function modelErrorHtml(e){
+  return '<b>모델을 불러오지 못했습니다.</b><br>' +
+    '이 파일을 더블클릭으로 열면 브라우저가 model.json 읽기를 막습니다. ' +
+    '배포 주소(http:// 또는 https://)로 열어 주세요.<br>' +
+    '<span style="opacity:.75">(' + esc(e.message || e) + ')</span>';
+}
+
+/* ── 흰 정사각형에 비율을 지켜 담기 ─────────────────────────────── */
+function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
+  const n = size || OUT;
+  const out = outCanvas || document.createElement("canvas");
+  out.width = out.height = n;
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,n,n);
+  const k = Math.min(n/sw, n/sh), dw = sw*k, dh = sh*k;
+  ctx.drawImage(src, sx, sy, sw, sh, (n-dw)/2, (n-dh)/2, dw, dh);
+  return out;
+}
+
+/* ── 전처리 ───────────────────────────────────────────────────────
+   우유갑 색, 조명, 그림자처럼 글씨와 상관없는 단서를 지우고
+   '글씨 모양'만 남긴다. 7주차 '같은 캔인데 숫자는 다르다',
+   10주차 '지름길 특징'에서 다룬 문제를 입력 단계에서 줄이는 방법.
+     ① 흰 정사각형에 담기  ② 회색조로 바꿔 색 단서를 없애기
+     ③ 크게 흐린 복사본으로 나눠 조명 기울기와 바탕색을 평탄하게
+     ④ S커브로 대비를 올려 글씨만 또렷하게
+   ※ 일곱 화면이 모두 이 함수를 그대로 쓴다. 한 곳이라도 다르면
+      학습·평가·실전의 입력이 어긋나 숫자를 견줄 수 없게 된다. */
+function preprocess(src, sx, sy, sw, sh, outCanvas){
+  const out = fitSquare(src, sx, sy, sw, sh, outCanvas);
+  const ctx = out.getContext("2d", {willReadFrequently:true});
+
+  const im = ctx.getImageData(0,0,OUT,OUT), d = im.data;
+  for(let i=0;i<d.length;i+=4){
+    const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
+    d[i]=d[i+1]=d[i+2]=g;
+  }
+  ctx.putImageData(im,0,0);
+
+  const blur = document.createElement("canvas");
+  blur.width = blur.height = OUT;
+  const bctx = blur.getContext("2d", {willReadFrequently:true});
+  bctx.filter = "blur(14px)"; bctx.drawImage(out,0,0); bctx.filter = "none";
+  const bd = bctx.getImageData(0,0,OUT,OUT).data;
+
+  const cur = ctx.getImageData(0,0,OUT,OUT), cd = cur.data;
+  for(let i=0;i<cd.length;i+=4){
+    const flat = Math.min(255, cd[i]/(bd[i]+1)*180);
+    const v = 255/(1+Math.exp(-(flat-138)/13));
+    cd[i]=cd[i+1]=cd[i+2]=v; cd[i+3]=255;
+  }
+  ctx.putImageData(cur,0,0);
+  return out;
+}
+
+/* 전처리 켜짐/꺼짐에 따라 모델에 넣을 캔버스를 만든다 */
+function makeInput(src, usePrep, outCanvas){
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  return usePrep ? preprocess(src, 0, 0, w, h, outCanvas)
+                 : fitSquare(src, 0, 0, w, h, outCanvas);
+}
+
+/* ── 파일 이름에서 정답 클래스 읽기 ─────────────────────────────
+   첫 밑줄 앞부분. 예) can_01.jpg → can, 아두_03.png → 아두
+   폴더째 넣은 경우에는 상위 폴더 이름을 먼저 본다. */
+function labelFromFile(file){
+  const path = file.webkitRelativePath || "";
+  if(path.indexOf("/") >= 0){
+    const parts = path.split("/");
+    if(parts.length >= 2) return parts[parts.length-2].trim();
+  }
+  const stem = file.name.replace(/\.[^.]+$/, "");
+  const i = stem.indexOf("_");
+  return (i > 0 ? stem.slice(0,i) : stem).trim();
+}
+
+/* 파일 하나를 이미지로 읽기 */
+function readImage(file){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error(file.name + " 를 열 수 없습니다")); };
+    img.src = url;
+  });
+}
+
+/* 가장 확률이 높은 클래스 고르기 */
+function topOf(pred){ return pred.reduce((a,b)=> a.probability > b.probability ? a : b); }
+
+/* ── 내려받기 ──────────────────────────────────────────────────── */
+function downloadBlob(blob, filename){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+/* 엑셀·한글에서 한글이 깨지지 않도록 BOM 을 앞에 붙인다 */
+function downloadCsv(rows, filename){
+  const q = v => '"' + String(v).replace(/"/g,'""') + '"';
+  const body = rows.map(r => Array.isArray(r) ? r.map(q).join(",") : r).join("\r\n");
+  downloadBlob(new Blob(["﻿"+body], {type:"text/csv;charset=utf-8;"}), filename);
+}
+function stamp(){ return new Date().toISOString().slice(0,10); }
+
+/* 캔버스를 PNG 로 저장 */
+function downloadCanvas(canvas, filename){
+  canvas.toBlob(b => downloadBlob(b, filename), "image/png");
+}
+
+
+/* =====================================================================
+   학생용 화면 v1
+   11주차 '화면 틀에서 고칠 네 가지'에 맞춰, 바꿀 값은 아래 CONFIG 한 곳에만 둔다.
+   ① title  ② grade  ③ threshold  ④ classes
+   저장 · 로그인 · 이름 입력은 넣지 않는다. 사진은 밖으로 내보내지 않는다.
+   ===================================================================== */
+const CONFIG = {
+  title: "우유왕 출석",          // 앱 이름
+  grade: "high",                 // "low" 1~2학년 · "mid" 3~4학년 · "high" 5~6학년
+  threshold: 0.70,               // 기준값. threshold.html 활동지 1번에서 고른 값
+  preprocess: true,              // 글씨만 남기는 전처리를 쓸지. eval·threshold 와 같게 둔다
+
+  // 모델의 클래스 이름을 글자 그대로 쓰고, 보여 줄 말과 할 일을 적는다.
+  // 여기에 없는 클래스는 아래 defaultSay / defaultHint 규칙으로 자동으로 만든다.
+  classes: {
+    // "아두":  { say: "아두 같아요",  icon: "🥛", hint: "우유를 가져가고 출석칸에 붙여요." },
+    // "하늘":  { say: "하늘 같아요",  icon: "🥛", hint: "우유를 가져가고 출석칸에 붙여요." },
+    "없음":   { say: "글씨가 안 보여요", icon: "❓", hint: "별명이 잘 보이게 다시 찍어요." }
+  },
+  defaultIcon: "🥛",
+  defaultHint: "우유를 가져가고 출석칸에 붙여요.",   // 할 일 한 문장 (수업 목표에서 가져옴)
+
+  // 기준값보다 낮을 때
+  unsure: {
+    say: "잘 모르겠어요",
+    tips: ["글씨가 네모칸에 꽉 차게 놓아요",
+           "그림자가 지지 않게 몸을 옆으로 비켜요",
+           "우유갑을 똑바로 세우고 다시 찍어요"]
+  },
+
+  // 늘 보이는 문장
+  notice: "AI는 틀릴 수 있어요. 헷갈리면 선생님께 물어봐요.",
+
+  // 5~6학년에게만 덧붙이는 질문
+  question: "AI는 사진의 무엇을 보고 이렇게 생각했을까요?"
+};
+
+/* ── 주소 뒤 ?grade=low, ?th=0.99 로 코드를 고치지 않고 바꿔 볼 수 있다 ──
+   11주차 30쪽. 다른 학년군 화면과 '잘 모르겠어요' 화면을 확인할 때 쓴다. */
+(function readQuery(){
+  const q = new URLSearchParams(location.search);
+  const g = q.get("grade");
+  if(g === "low" || g === "mid" || g === "high") CONFIG.grade = g;
+  const t = parseFloat(q.get("th"));
+  if(!isNaN(t) && t >= 0 && t <= 1) CONFIG.threshold = t;
+  const p = q.get("prep");
+  if(p === "0") CONFIG.preprocess = false;
+  if(p === "1") CONFIG.preprocess = true;
+})();
+
+/* 학년군마다 보여 줄 것이 다르다 (11주차 17쪽)
+     low  : 그림 + '~ 같아요' + 할 일 한 문장. 숫자도 막대도 없음
+     mid  : 위에 더해 클래스 3개의 막대. 숫자는 없음
+     high : 위에 더해 막대 옆 숫자, 그리고 생각할 질문 */
+const GRADE = {
+  low:  { bars:false, numbers:false, question:false },
+  mid:  { bars:true,  numbers:false, question:false },
+  high: { bars:true,  numbers:true,  question:true  }
+};
+function gradeRule(){ return GRADE[CONFIG.grade] || GRADE.mid; }
+
+/* 클래스 이름 하나에 대해 보여 줄 말·그림·할 일을 꺼낸다 */
+function sayOf(name){
+  const c = CONFIG.classes[name];
+  if(c) return c;
+  // CONFIG 에 적지 않은 클래스는 '~ 같아요' 규칙으로 자동으로 만든다
+  return { say: name + " 같아요", icon: CONFIG.defaultIcon, hint: CONFIG.defaultHint };
+}
+
+/* =====================================================================
+   화면 넘기기
+   ===================================================================== */
+let photo = null;                 // 찍거나 고른 사진 (캔버스)
+let box = {x:0,y:0,w:0,h:0};      // 자르기 영역
+let stream = null, facing = "environment";
+
+function view(which){
+  ["vStart","vCam","vCrop","vResult"].forEach(id => $(id).classList.toggle("hidden", id !== which));
+  if(which !== "vCam") stopCamera();
+  const step = {vStart:1, vCam:1, vCrop:2, vResult:3}[which];
+  [1,2,3].forEach(n => $("s"+n).classList.toggle("on", n <= step));
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+/* =====================================================================
+   카메라 — 뒤 카메라를 먼저 쓰고, 안 되면 사진 고르기로 넘긴다
+   ===================================================================== */
+async function startCamera(){
+  stopCamera();
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ ideal:facing }, width:{ideal:1280}, height:{ideal:960} }, audio:false });
+    const v = $("video"); v.srcObject = stream; await v.play();   // playsinline 으로 전체화면 전환을 막는다
+  }catch(e){
+    view("vStart");
+    msg("startAlert","카메라를 켤 수 없어요. <b>사진 고르기</b>로 해 볼까요?<br>" +
+        "<span style='opacity:.75'>("+esc(e.name||e.message)+")</span>","warn");
+  }
+}
+function stopCamera(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }   // 트랙을 멈춰야 표시등이 꺼진다
+  const v = $("video"); if(v) v.srcObject = null;
+}
+async function flipCamera(){ facing = (facing==="environment") ? "user" : "environment"; await startCamera(); }
+
+/* 앞 카메라는 좌우가 뒤집혀 보이므로 글씨가 바로 보이게 되돌려 그린다 */
+function shoot(){
+  const v = $("video"); if(!v.videoWidth) return;
+  const c = document.createElement("canvas");
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const x = c.getContext("2d");
+  if(facing === "user"){ x.translate(c.width,0); x.scale(-1,1); }
+  x.drawImage(v,0,0);
+  photo = c; stopCamera(); openCrop();
+}
+
+/* =====================================================================
+   자르기 — 기본 네모는 학습지 칸과 같은 3:2 비율
+   ===================================================================== */
+function openCrop(){
+  view("vCrop");
+  const cv = $("cropCanvas");
+  const maxW = $("cropStage").clientWidth || 460;
+  const s = maxW / photo.width;
+  cv.width = Math.round(photo.width*s); cv.height = Math.round(photo.height*s);
+  cv.getContext("2d").drawImage(photo,0,0,cv.width,cv.height);
+  const w = cv.width*0.74;
+  box = { x:(cv.width-w)/2, y:(cv.height-w/1.5)/2, w:w, h:w/1.5 };
+  clampBox(); drawBox(); updatePreview();
+}
+function clampBox(){
+  const cv = $("cropCanvas");
+  box.w = Math.max(50, Math.min(box.w, cv.width));
+  box.h = Math.max(40, Math.min(box.h, cv.height));
+  box.x = Math.max(0, Math.min(box.x, cv.width - box.w));
+  box.y = Math.max(0, Math.min(box.y, cv.height - box.h));
+}
+function drawBox(){
+  const cv = $("cropCanvas"), r = cv.getBoundingClientRect();
+  const k = r.width / cv.width, el = $("cropBox");
+  el.style.left=(box.x*k)+"px"; el.style.top=(box.y*k)+"px";
+  el.style.width=(box.w*k)+"px"; el.style.height=(box.h*k)+"px";
+  const pos = {nw:[0,0], ne:[1,0], se:[1,1], sw:[0,1]};
+  el.querySelectorAll(".hdl").forEach(h=>{
+    const [px,py]=pos[h.dataset.h];
+    h.style.left=(px*100)+"%"; h.style.top=(py*100)+"%";
+  });
+}
+(function bindCrop(){
+  const stage = $("cropStage"), el = $("cropBox");
+  let mode=null, p0=null, b0=null;
+  const toCv = (e)=>{ const cv=$("cropCanvas"), r=cv.getBoundingClientRect(), k=cv.width/r.width;
+    return {x:(e.clientX-r.left)*k, y:(e.clientY-r.top)*k}; };
+  stage.addEventListener("pointerdown", e=>{
+    const h = e.target.closest(".hdl");
+    mode = h ? h.dataset.h : (el.contains(e.target) ? "move" : null);
+    if(!mode) return;
+    e.preventDefault(); p0=toCv(e); b0={...box}; stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", e=>{
+    if(!mode) return; e.preventDefault();
+    const p=toCv(e), dx=p.x-p0.x, dy=p.y-p0.y;
+    if(mode==="move"){ box.x=b0.x+dx; box.y=b0.y+dy; }
+    else{
+      let l=b0.x,t=b0.y,r=b0.x+b0.w,b=b0.y+b0.h;
+      if(mode.includes("w")) l=Math.min(r-50, b0.x+dx);
+      if(mode.includes("e")) r=Math.max(l+50, b0.x+b0.w+dx);
+      if(mode.includes("n")) t=Math.min(b-40, b0.y+dy);
+      if(mode.includes("s")) b=Math.max(t+40, b0.y+b0.h+dy);
+      box={x:l,y:t,w:r-l,h:b-t};
+    }
+    clampBox(); drawBox();
+  });
+  const up=()=>{ if(mode){ mode=null; updatePreview(); } };
+  stage.addEventListener("pointerup", up);
+  stage.addEventListener("pointercancel", up);
+  window.addEventListener("resize", ()=>{ if(!$("vCrop").classList.contains("hidden")) drawBox(); });
+})();
+
+/* 자른 원본과, 모델에 넣을 그림을 나란히 보여 준다 */
+function updatePreview(){
+  const cv = $("cropCanvas"), k = photo.width/cv.width;
+  const sx=box.x*k, sy=box.y*k, sw=box.w*k, sh=box.h*k;
+  fitSquare(photo, sx, sy, sw, sh, $("prevRaw"));
+  if(CONFIG.preprocess) preprocess(photo, sx, sy, sw, sh, $("prevPrep"));
+  else fitSquare(photo, sx, sy, sw, sh, $("prevPrep"));
+}
+
+/* =====================================================================
+   판정 — 기준값과 견주는 곳은 아래 render() 한 군데뿐이다
+   ===================================================================== */
+async function predict(){
+  view("vResult");
+  $("result").className = "";
+  $("result").innerHTML = '<div class="loader"></div><div class="note">AI가 살펴보는 중…</div>';
+  try{
+    await loadModel();
+    const pred = await __model.predict($("prevPrep"));   // 화면에 보이는 그 그림을 그대로 넣는다
+    render(pred);
+  }catch(e){
+    $("result").className = "unsure";
+    $("result").innerHTML = '<span class="rIcon">😢</span><div class="rSay">문제가 생겼어요</div>' +
+      '<div class="note" style="margin-top:12px">' + modelErrorHtml(e) + '</div>';
+  }
+}
+
+function render(pred){
+  const g = gradeRule();
+  const sorted = pred.slice().sort((a,b)=> b.probability - a.probability);
+  const top = sorted[0];
+  const r = $("result");
+  let html = "";
+
+  if(top.probability >= CONFIG.threshold){
+    /* 기준값 이상 — '~ 같아요' 문장과 할 일 한 문장 */
+    const c = sayOf(top.className);
+    r.className = "pop";
+    html += '<span class="rIcon">' + c.icon + '</span>';
+    html += '<div class="rSay"><em>' + esc(c.say) + '</em></div>';
+    html += '<div class="rHint">' + esc(c.hint) + '</div>';
+  }else{
+    /* 기준값 미만 — 이름을 말하지 않고 다시 찍는 방법을 알려 준다 */
+    r.className = "pop unsure";
+    html += '<span class="rIcon">🤔</span>';
+    html += '<div class="rSay">' + esc(CONFIG.unsure.say) + '</div>';
+    html += '<div class="tips">' +
+      CONFIG.unsure.tips.map((t,i)=> '<div><b>'+(i+1)+'.</b><span>'+esc(t)+'</span></div>').join("") +
+      '</div>';
+  }
+
+  /* 막대는 3~4학년부터, 숫자는 5~6학년부터 */
+  if(g.bars){
+    const three = sorted.slice(0,3);
+    html += '<div class="bars">' + three.map((p,i)=>
+      '<div class="brow'+(i?' dim':'')+'">' +
+        '<span class="nm">'+esc(p.className)+'</span>' +
+        '<span class="btrack"><i data-w="'+(p.probability*100)+'"></i></span>' +
+        (g.numbers ? '<span class="pc">'+(p.probability*100).toFixed(0)+'%</span>' : '<span class="pc"></span>') +
+      '</div>').join("") + '</div>';
+  }
+  if(g.question){
+    html += '<div class="qbox">💭 ' + esc(CONFIG.question) + '</div>';
+  }
+
+  r.innerHTML = html;
+  // 막대는 그린 뒤에 늘려야 애니메이션이 보인다
+  requestAnimationFrame(()=>{
+    r.querySelectorAll(".btrack i").forEach(el => el.style.width = el.dataset.w + "%");
+  });
+}
+
+/* =====================================================================
+   버튼 연결
+   ===================================================================== */
+$("btnCam").onclick = async ()=>{ view("vCam"); await startCamera(); };
+$("btnUp").onclick = ()=> $("fileInput").click();
+$("btnShoot").onclick = shoot;
+$("flipBtn").onclick = flipCamera;
+$("btnCamCancel").onclick = ()=> view("vStart");
+$("btnCropBack").onclick = ()=> view("vStart");
+$("btnPredict").onclick = predict;
+$("btnAgain").onclick = ()=>{ clearMsg("startAlert"); view("vStart"); };
+
+$("fileInput").addEventListener("change", (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const img = new Image();
+  img.onload = ()=>{
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext("2d").drawImage(img,0,0);
+    photo = c; URL.revokeObjectURL(img.src); openCrop();
+  };
+  img.onerror = ()=> msg("startAlert","사진을 열 수 없어요. 다른 사진으로 해 볼까요?","err");
+  img.src = URL.createObjectURL(f);
+  e.target.value = "";
+});
+
+/* =====================================================================
+   시작
+   ===================================================================== */
+(function boot(){
+  document.title = CONFIG.title;
+  $("appTitle").innerHTML = '<span class="pill">1</span> ' + esc(CONFIG.title);
+  $("startLead").textContent = "우유갑에 쓴 별명을 카메라로 보여 주거나, 찍어 둔 사진을 고르세요.";
+  $("footNotice").textContent = "⚠️ " + CONFIG.notice;   // 늘 보이는 문장
+  $("prepRow").classList.toggle("hidden", !CONFIG.preprocess && false);
+  // 모델을 미리 읽어 둔다. 버튼을 눌렀을 때 기다리지 않도록.
+  loadModel().catch(e => msg("startAlert", modelErrorHtml(e), "err"));
+})();
+
+</script>
+</body>
+</html>
