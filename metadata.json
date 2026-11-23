@@ -1,1 +1,1 @@
-{"tfjsVersion":"1.7.4","tmVersion":"2.4.19","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-11-17T09:11:14.349Z","userMetadata":{},"modelName":"우유갑 글씨체 모델 v3","labels":["코알라","참치","승머니","강아지","백설기"],"imageSize":224}
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.19","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-11-23T12:08:38.808Z","userMetadata":{},"modelName":"우유갑 글씨체 모델 v3","labels":["코알라","참치","승머니","강아지","백설기"],"imageSize":224}
