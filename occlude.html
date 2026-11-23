@@ -1,4 +1,3 @@
-<!-- ver3 · 2026-11-15 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -154,7 +153,7 @@ tr.reco td,tr.reco th{font-weight:800}
       <div style="flex:0 0 150px"><label class="fld">볼 클래스</label><select id="cls"></select></div>
       <div style="flex:0 0 110px"><label class="fld">격자</label>
         <select id="grid"><option value="6" selected>6 × 6 (36칸)</option><option value="8">8 × 8 (64칸)</option></select></div>
-      <label class="chk" style="padding-top:18px"><input type="checkbox" id="usePrep" checked> 전처리 적용</label>
+      <label class="chk" style="padding-top:18px"><input type="checkbox" id="usePrep" checked> 흑백 이진화 적용</label>
     </div>
     <p class="note" style="margin-top:11px">
       틀린 사진이면 <b>모델이 예측한 클래스</b>를 그대로 두세요. 무엇을 보고 그렇게 판정했는지 묻는 것입니다.
@@ -251,42 +250,303 @@ function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
   ctx.fillStyle = "#fff"; ctx.fillRect(0,0,n,n);
   const k = Math.min(n/sw, n/sh), dw = sw*k, dh = sh*k;
   ctx.drawImage(src, sx, sy, sw, sh, (n-dw)/2, (n-dh)/2, dw, dh);
+  out.__rect = {x:(n-dw)/2, y:(n-dh)/2, w:dw, h:dh};   // 흰 여백을 뺀 실제 사진 자리
   return out;
 }
 
-/* ── 전처리 ───────────────────────────────────────────────────────
-   우유갑 색, 조명, 그림자처럼 글씨와 상관없는 단서를 지우고
-   '글씨 모양'만 남긴다. 7주차 '같은 캔인데 숫자는 다르다',
-   10주차 '지름길 특징'에서 다룬 문제를 입력 단계에서 줄이는 방법.
-     ① 흰 정사각형에 담기  ② 회색조로 바꿔 색 단서를 없애기
-     ③ 크게 흐린 복사본으로 나눠 조명 기울기와 바탕색을 평탄하게
-     ④ S커브로 대비를 올려 글씨만 또렷하게
-   ※ 일곱 화면이 모두 이 함수를 그대로 쓴다. 한 곳이라도 다르면
-      학습·평가·실전의 입력이 어긋나 숫자를 견줄 수 없게 된다. */
-function preprocess(src, sx, sy, sw, sh, outCanvas){
-  const out = fitSquare(src, sx, sy, sw, sh, outCanvas);
-  const ctx = out.getContext("2d", {willReadFrequently:true});
 
-  const im = ctx.getImageData(0,0,OUT,OUT), d = im.data;
-  for(let i=0;i<d.length;i+=4){
-    const g = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
-    d[i]=d[i+1]=d[i+2]=g;
+/* =====================================================================
+   흑백 이진화 (bin-v2) — 글씨 획만 검정, 나머지는 모두 흰색
+   우유갑의 어두운 바탕, 얼룩, 그림자, 색 인쇄처럼 '글씨가 아닌데 어두운 것'은
+   흰색으로 보낸다.
+     ① 회색조 + 색의 진하기(채도) 구하기
+     ② 바탕 밝기 구하기: 최댓값 → 최솟값 필터(닫힘)로 가는 획만 지우고 살짝 흐리기
+     ③ 바탕으로 나눠 조명 기울기와 그림자를 평평하게 펴기
+     ④ 오츠(Otsu) 방법으로 '주변보다 어두운 곳'의 기준을 찾고,
+        이력 문턱(hysteresis): 충분히 진한 점에서 시작해 이어진 획만 남긴다
+        → 옅은 얼룩·연한 회색 자국은 시작점이 없어 사라진다
+     ⑤ 아주 어두운 곳 가운데 두꺼운 덩어리(우유갑 진한 면, 짙은 무늬)는 둘레까지 지우고,
+        가는 것(굵은 펜 글씨의 속)은 획으로 채운다
+     ⑥ 덩어리 검사: 너무 두꺼운 것, 속이 꽉 찬 큰 덩어리, 가장자리의 굵은 띠와
+        곧은 선, 아주 작은 티끌은 글씨가 아니므로 흰색
+   · 글씨가 남지 않으면 통째로 흰 그림 (빈 칸, '없음' 클래스용 사진).
+   · 이미 흑백인 그림은 ⑥ 덩어리 검사만 한다. 두 번 거쳐도 그림이 같다.
+   · 브라우저의 canvas filter 를 쓰지 않고 모두 숫자로 계산한다.
+     크롬·삼성 인터넷·사파리 어디서든 같은 사진이면 같은 흑백 그림이 나온다.
+   · 캔버스 크기에 맞춰 필터 크기를 정하므로 224·128·300 모두 쓸 수 있다.
+   ===================================================================== */
+const BIN_VERSION = "bin-v2";
+
+/* 한 줄씩 최댓값 필터 (획 지우기) */
+function __binMax1D(src, dst, w, h, r, horiz){
+  if(horiz){
+    for(let y=0;y<h;y++){
+      const row=y*w;
+      for(let x=0;x<w;x++){
+        let m=0; const a=Math.max(0,x-r), b=Math.min(w-1,x+r);
+        for(let k=a;k<=b;k++){ const v=src[row+k]; if(v>m) m=v; }
+        dst[row+x]=m;
+      }
+    }
+  }else{
+    for(let x=0;x<w;x++){
+      for(let y=0;y<h;y++){
+        let m=0; const a=Math.max(0,y-r), b=Math.min(h-1,y+r);
+        for(let k=a;k<=b;k++){ const v=src[k*w+x]; if(v>m) m=v; }
+        dst[y*w+x]=m;
+      }
+    }
+  }
+}
+
+/* 한 줄씩 최솟값 필터 (최댓값 필터와 짝: 큰 어두운 면의 경계를 제자리로) */
+function __binMin1D(src, dst, w, h, r, horiz){
+  if(horiz){
+    for(let y=0;y<h;y++){
+      const row=y*w;
+      for(let x=0;x<w;x++){
+        let m=255; const a=Math.max(0,x-r), b=Math.min(w-1,x+r);
+        for(let k=a;k<=b;k++){ const v=src[row+k]; if(v<m) m=v; }
+        dst[row+x]=m;
+      }
+    }
+  }else{
+    for(let x=0;x<w;x++){
+      for(let y=0;y<h;y++){
+        let m=255; const a=Math.max(0,y-r), b=Math.min(h-1,y+r);
+        for(let k=a;k<=b;k++){ const v=src[k*w+x]; if(v<m) m=v; }
+        dst[y*w+x]=m;
+      }
+    }
+  }
+}
+
+/* 한 줄씩 상자 흐림. 가장자리는 끝 픽셀을 늘려 쓴다 */
+function __binBox1D(src, dst, w, h, r, horiz){
+  const n = 2*r+1;
+  if(horiz){
+    for(let y=0;y<h;y++){
+      const row=y*w; let s=0;
+      for(let k=-r;k<=r;k++) s += src[row+Math.min(w-1,Math.max(0,k))];
+      for(let x=0;x<w;x++){
+        dst[row+x]=s/n;
+        s += src[row+Math.min(w-1,x+r+1)] - src[row+Math.max(0,x-r)];
+      }
+    }
+  }else{
+    for(let x=0;x<w;x++){
+      let s=0;
+      for(let k=-r;k<=r;k++) s += src[Math.min(h-1,Math.max(0,k))*w+x];
+      for(let y=0;y<h;y++){
+        dst[y*w+x]=s/n;
+        s += src[Math.min(h-1,y+r+1)*w+x] - src[Math.max(0,y-r)*w+x];
+      }
+    }
+  }
+}
+
+/* 오츠 방법: 두 무리(글씨/바탕)의 차이가 가장 커지는 기준값 */
+function __binOtsu(hist, total){
+  let sum=0; for(let t=0;t<256;t++) sum += t*hist[t];
+  let sumB=0, wB=0, best=-1, thr=128;
+  for(let t=0;t<256;t++){
+    wB += hist[t]; if(!wB) continue;
+    const wF = total-wB; if(!wF) break;
+    sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF;
+    const v = wB*wF*(mB-mF)*(mB-mF);
+    if(v>best){ best=v; thr=t; }
+  }
+  return thr;
+}
+
+/* 히스토그램에서 q(0~1) 위치의 값 */
+function __binPct(hist, total, q){
+  let acc=0; const goal=total*q;
+  for(let t=0;t<256;t++){ acc+=hist[t]; if(acc>=goal) return t; }
+  return 255;
+}
+
+/* 덩어리 검사: 글씨 획처럼 생기지 않은 덩어리를 지운다.
+   mask: 1=검정 후보. dark: 바탕까지 어두운 점(없으면 null). 제자리에서 고친다. */
+function __binClean(mask, dark, w, h, thickOnly){
+  const N=w*h, m=Math.min(w,h);
+  // 획 두께: 가장 가까운 흰 점까지 거리 (체스판 3-4 거리, 3으로 나누면 픽셀)
+  const dt = new Uint16Array(N);
+  for(let p=0;p<N;p++) dt[p] = mask[p] ? 65535 : 0;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    const p=y*w+x; if(!dt[p]) continue;
+    let v = dt[p];
+    if(x===0||y===0||x===w-1||y===h-1) v = Math.min(v, 3);
+    if(x>0) v=Math.min(v, dt[p-1]+3);
+    if(y>0){ v=Math.min(v, dt[p-w]+3); if(x>0) v=Math.min(v, dt[p-w-1]+4); if(x<w-1) v=Math.min(v, dt[p-w+1]+4); }
+    dt[p]=v;
+  }
+  for(let y=h-1;y>=0;y--) for(let x=w-1;x>=0;x--){
+    const p=y*w+x; if(!dt[p]) continue;
+    let v = dt[p];
+    if(x<w-1) v=Math.min(v, dt[p+1]+3);
+    if(y<h-1){ v=Math.min(v, dt[p+w]+3); if(x<w-1) v=Math.min(v, dt[p+w+1]+4); if(x>0) v=Math.min(v, dt[p+w-1]+4); }
+    dt[p]=v;
+  }
+  // 덩어리 나누기 (8방향으로 이어진 점끼리)
+  const lab = new Int32Array(N), stack = new Int32Array(N);
+  const minArea = Math.max(4, Math.round(N*0.00012));
+  const maxHalf = 0.08*m;           // 이보다 두꺼우면 획이 아니라 덩어리
+  const edgeHalf = 0.045*m;         // 가장자리에 붙은 굵은 띠
+  let id=0, kept=0;
+  for(let s=0;s<N;s++){
+    if(!mask[s] || lab[s]) continue;
+    id++; let sp=0; stack[sp++]=s; lab[s]=id;
+    let area=0, nDark=0, maxD=0, x0=w, x1=-1, y0=h, y1=-1, edge=false;
+    const members=[];
+    while(sp){
+      const p=stack[--sp]; members.push(p); area++;
+      const x=p%w, y=(p-x)/w;
+      if(dark && dark[p]) nDark++;
+      if(dt[p]>maxD) maxD=dt[p];
+      if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      if(x===0||y===0||x===w-1||y===h-1) edge=true;
+      for(let dy=-1;dy<=1;dy++){ const yy=y+dy; if(yy<0||yy>=h) continue;
+        for(let dx=-1;dx<=1;dx++){ const xx=x+dx; if(xx<0||xx>=w) continue;
+          const q=yy*w+xx; if(mask[q] && !lab[q]){ lab[q]=id; stack[sp++]=q; } } }
+    }
+    const half = maxD/3, bw=x1-x0+1, bh=y1-y0+1, fill=area/(bw*bh);
+    if(thickOnly){                                        // 두꺼운 덩어리만 남기는 모드
+      const isThick = half > maxHalf || (area > 0.015*N && fill > 0.75 && half > 0.05*m);
+      if(!isThick){ for(const p of members) mask[p]=0; } else kept += area;
+      continue;
+    }
+    let drop =
+      area < minArea ||                                   // 티끌
+      half > maxHalf ||                                   // 너무 두꺼운 덩어리
+      area > 0.35*N ||                                    // 그림의 1/3이 넘는 덩어리
+      (nDark > 0.25*area) ||                              // 바탕이 어두운 곳에서 생긴 덩어리
+      (area > 0.015*N && fill > 0.75 && half > 0.05*m) ||  // 속이 꽉 찬 큰 덩어리(얼룩)
+      (edge && half > edgeHalf && area > 0.12*N) ||       // 가장자리의 굵은 띠
+      (edge && ((bw > 0.85*w && bh < 0.08*h) || (bh > 0.85*h && bw < 0.08*w))); // 가장자리의 곧은 선
+    if(drop){ for(const p of members) mask[p]=0; }
+    else kept += area;
+  }
+  return kept;
+}
+
+/* 캔버스를 제자리에서 흑백으로 바꾼다. 돌려주는 값은 살펴보기용 정보 */
+function binarizeCanvas(cv){
+  const w = cv.width, h = cv.height, N = w*h;
+  const ctx = cv.getContext("2d", {willReadFrequently:true});
+  const im = ctx.getImageData(0,0,w,h), d = im.data;
+
+  // ① 회색조와 채도 (투명한 곳은 흰 바탕으로 본다)
+  const g = new Float32Array(N), chroma = new Uint8Array(N);
+  let twoTone = true;
+  for(let i=0,p=0;p<N;i+=4,p++){
+    const a = d[i+3]/255;
+    const r = d[i]*a+255*(1-a), gg = d[i+1]*a+255*(1-a), b = d[i+2]*a+255*(1-a);
+    const v = r*0.299 + gg*0.587 + b*0.114;
+    g[p] = v;
+    chroma[p] = Math.max(r,gg,b) - Math.min(r,gg,b);
+    if(twoTone && !(v<0.5 || v>254.5)) twoTone = false;
+  }
+  const ink = new Uint8Array(N);
+  let info = { threshold:128, contrast:0, ink:0, blank:true };
+
+  if(twoTone){
+    // 이미 흑백: 검은 점에 덩어리 검사만
+    for(let p=0;p<N;p++) ink[p] = g[p]<0.5 ? 1 : 0;
+    const kept = __binClean(ink, null, w, h);
+    info = { threshold:128, contrast:255, ink:kept/N, blank:kept/N < 0.002 };
+  }else{
+    // ② 바탕 밝기
+    const s = Math.min(w,h)/224;
+    // 닫힘(최댓값 → 최솟값): 가는 획은 지워지고, 그림자·진한 면의 경계는 제자리에 남는다
+    const rMax = Math.max(3, Math.round(14*s)), rBox = Math.max(1, Math.round(3*s));
+    const t1 = new Float32Array(N), bg = new Float32Array(N);
+    __binMax1D(g, t1, w, h, rMax, true);  __binMax1D(t1, bg, w, h, rMax, false);
+    __binMin1D(bg, t1, w, h, rMax, true); __binMin1D(t1, bg, w, h, rMax, false);
+    __binBox1D(bg, t1, w, h, rBox, true); __binBox1D(t1, bg, w, h, rBox, false);
+
+    // 종이(가장 밝은 바탕) 밝기
+    const hb = new Uint32Array(256);
+    for(let p=0;p<N;p++) hb[Math.min(255, Math.round(bg[p]))]++;
+    const paper = Math.max(1, __binPct(hb, N, 0.95));
+
+    if(paper >= 60){
+      // ③ 평평하게 펴기
+      const flat = new Uint8Array(N), use = new Uint8Array(N), R = new Uint8Array(N);
+      const hist = new Uint32Array(256); let nUse = 0;
+      for(let p=0;p<N;p++){
+        const v = Math.max(0, Math.min(255, Math.round(g[p]/(bg[p]+1)*255)));
+        flat[p] = v;
+        const mx = Math.max(1, g[p] + chroma[p]);                // 대략 가장 밝은 색 성분
+        const lightColor = chroma[p]/mx > 0.25 && g[p] > 0.35*paper;  // 색이 있고 아주 진하지 않은 것: 인쇄·색 얼룩
+        if(!lightColor){ use[p]=1; hist[v]++; nUse++; }
+        R[p] = (!lightColor && g[p] < 0.5*paper) ? 1 : 0;          // 아주 어두운 점
+      }
+
+      // ④ 기준값과 이력 문턱
+      if(nUse > N*0.05){
+        const thr = Math.min(__binOtsu(hist, nUse), 225);
+        let nB=0, sB=0, sF=0;
+        for(let t=0;t<256;t++){ if(t<thr){ nB+=hist[t]; sB+=t*hist[t]; } else sF+=t*hist[t]; }
+        const mB = nB ? sB/nB : 255, mF = (nUse-nB) ? sF/(nUse-nB) : 255;
+        const contrast = mF - mB;
+        const low = mB + (thr - mB)*0.5;       // 시작점이 되려면 이만큼 진해야 한다
+        const gCut = 0.65*paper;               // 그리고 종이보다 확실히 어두워야 한다
+        info.threshold = thr; info.contrast = Math.round(contrast);
+        if(contrast >= 40){
+          const stack = new Int32Array(N); let sp = 0;
+          for(let p=0;p<N;p++){
+            if(use[p] && flat[p] < low && g[p] < gCut){ ink[p]=1; stack[sp++]=p; }
+          }
+          while(sp){                              // 시작점에서 이어진 획만 키운다
+            const p = stack[--sp], x = p%w, y = (p-x)/w;
+            for(let dy=-1;dy<=1;dy++){ const yy=y+dy; if(yy<0||yy>=h) continue;
+              for(let dx=-1;dx<=1;dx++){ const xx=x+dx; if(xx<0||xx>=w) continue;
+                const q=yy*w+xx;
+                if(!ink[q] && use[q] && flat[q] < thr){ ink[q]=1; stack[sp++]=q; } } }
+          }
+          // ⑤ 아주 어두운 점 가운데 두꺼운 덩어리(우유갑 진한 면, 짙은 무늬)는
+          //    그 둘레까지 흰색으로, 가는 것(굵은 펜 글씨 속)은 검정으로
+          const thick = new Uint8Array(N);
+          for(let p=0;p<N;p++) thick[p]=R[p];
+          __binClean(thick, null, w, h, true);    // true: 두꺼운 덩어리만 남긴다
+          const rd = Math.max(2, Math.round(3*s));
+          const near = new Uint8Array(N), tmp = new Uint8Array(N);
+          for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let v=0; const a=Math.max(0,x-rd), b=Math.min(w-1,x+rd);
+            for(let k=a;k<=b && !v;k++) v=thick[y*w+k]; tmp[y*w+x]=v; }
+          for(let x=0;x<w;x++) for(let y=0;y<h;y++){ let v=0; const a=Math.max(0,y-rd), b=Math.min(h-1,y+rd);
+            for(let k=a;k<=b && !v;k++) v=tmp[k*w+x]; near[y*w+x]=v; }
+          for(let p=0;p<N;p++){
+            if(R[p]) ink[p]=1;
+            if(near[p]) ink[p]=0;
+          }
+          // ⑥ 덩어리 검사
+          const kept = __binClean(ink, null, w, h);
+          info.ink = kept/N; info.blank = kept/N < 0.002;
+        }
+      }
+    }
+    if(info.blank) ink.fill(0);
+  }
+
+  for(let i=0,p=0;p<N;i+=4,p++){
+    const v = ink[p] ? 0 : 255;
+    d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
   }
   ctx.putImageData(im,0,0);
+  return info;
+}
 
-  const blur = document.createElement("canvas");
-  blur.width = blur.height = OUT;
-  const bctx = blur.getContext("2d", {willReadFrequently:true});
-  bctx.filter = "blur(14px)"; bctx.drawImage(out,0,0); bctx.filter = "none";
-  const bd = bctx.getImageData(0,0,OUT,OUT).data;
 
-  const cur = ctx.getImageData(0,0,OUT,OUT), cd = cur.data;
-  for(let i=0;i<cd.length;i+=4){
-    const flat = Math.min(255, cd[i]/(bd[i]+1)*180);
-    const v = 255/(1+Math.exp(-(flat-138)/13));
-    cd[i]=cd[i+1]=cd[i+2]=v; cd[i+3]=255;
-  }
-  ctx.putImageData(cur,0,0);
+/* ── 전처리 = 흰 정사각형에 담기 + 흑백 이진화(bin-v2 '글씨만 검정') ──
+   자른 부분을 224×224 흰 정사각형에 담은 뒤 binarizeCanvas() 로
+   펜 글씨 획만 검정, 어두운 배경·얼룩·그림자·색 인쇄는 흰색으로 보낸다.
+   ※ 학생 화면·eval·threshold·occlude·data.html 이 모두 이 순서를 그대로 쓴다.
+      한 곳이라도 다르면 학습·평가·실전의 입력이 어긋나 숫자를 견줄 수 없다. */
+function preprocess(src, sx, sy, sw, sh, outCanvas){
+  const out = fitSquare(src, sx, sy, sw, sh, outCanvas);
+  out.__bin = binarizeCanvas(out, {rect: out.__rect});
   return out;
 }
 
@@ -493,7 +753,7 @@ function where(r,c){
 /* ── 내려받기 / 복사 ─────────────────────────────────────────── */
 function saveCsv(){
   const out = [["파일명", fileName], ["볼 클래스", watchClass], ["격자", G+"×"+G],
-               ["가린 색", "회색 "+GRAY], ["전처리", $("usePrep").checked?"적용":"없음"],
+               ["가린 색", "회색 "+GRAY], ["흑백 이진화", $("usePrep").checked?"적용":"없음"],
                ["원본 확률(%)", (origProb*100).toFixed(2)], []];
   out.push(["행","열","자리","가렸을 때 확률(%)","떨어진 양(%p)"]);
   drops.slice().sort((a,b)=>b.drop-a.drop).forEach(d =>
@@ -518,7 +778,7 @@ $("btnPick").onclick = ()=> $("file").click();
 $("file").addEventListener("change", e=>{ const f=e.target.files[0]; if(f) run(f); e.target.value=""; });
 $("cls").addEventListener("change", ()=>{ if(base) runWith($("cls").value); });
 $("grid").addEventListener("change", ()=>{ if(base) runWith($("cls").value); });
-$("usePrep").addEventListener("change", ()=>{ if(base) msg("pickMsg","전처리를 바꿨습니다. 사진을 다시 넣어 주세요.","info"); });
+$("usePrep").addEventListener("change", ()=>{ if(base) msg("pickMsg","흑백 이진화 설정을 바꿨습니다. 사진을 다시 넣어 주세요.","info"); });
 $("btnCsv").onclick = saveCsv;
 $("btnPng").onclick = ()=> downloadCanvas($("cvHeat"), "히트맵_"+fileName.replace(/\.[^.]+$/,"")+".png");
 $("btnRow").onclick = copyRow;
