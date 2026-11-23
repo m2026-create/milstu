@@ -393,7 +393,7 @@ function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
 
 
 /* =====================================================================
-   흑백 이진화 (bin-v2) — 글씨 획만 검정, 나머지는 모두 흰색
+   흑백 이진화 (bin-v3) — 글씨 획만 검정, 나머지는 모두 흰색
    우유갑의 어두운 바탕, 얼룩, 그림자, 색 인쇄처럼 '글씨가 아닌데 어두운 것'은
    흰색으로 보낸다.
      ① 회색조 + 색의 진하기(채도) 구하기
@@ -406,13 +406,17 @@ function fitSquare(src, sx, sy, sw, sh, outCanvas, size){
         가는 것(굵은 펜 글씨의 속)은 획으로 채운다
      ⑥ 덩어리 검사: 너무 두꺼운 것, 속이 꽉 찬 큰 덩어리, 가장자리의 굵은 띠와
         곧은 선, 아주 작은 티끌은 글씨가 아니므로 흰색
+     ⑦ 진하기 검사: 글씨보다 확실히 옅은 덩어리(우유갑 접힌 주름, 연한 긁힘)는 흰색
+   · 흰 여백(정사각형에 담을 때 생긴 것)은 빼고 사진 자리만 계산한다 (bin-v3).
+     가장자리 검사도 사진의 가장자리 기준: 위·아래나 양옆을 따라 길게 깔린 띠
+     (우유갑 밑면의 울퉁불퉁한 주름, 탁자 경계)는 흰색.
    · 글씨가 남지 않으면 통째로 흰 그림 (빈 칸, '없음' 클래스용 사진).
    · 이미 흑백인 그림은 ⑥ 덩어리 검사만 한다. 두 번 거쳐도 그림이 같다.
    · 브라우저의 canvas filter 를 쓰지 않고 모두 숫자로 계산한다.
      크롬·삼성 인터넷·사파리 어디서든 같은 사진이면 같은 흑백 그림이 나온다.
    · 캔버스 크기에 맞춰 필터 크기를 정하므로 224·128·300 모두 쓸 수 있다.
    ===================================================================== */
-const BIN_VERSION = "bin-v2";
+const BIN_VERSION = "bin-v3";
 
 /* 한 줄씩 최댓값 필터 (획 지우기) */
 function __binMax1D(src, dst, w, h, r, horiz){
@@ -506,8 +510,8 @@ function __binPct(hist, total, q){
 
 /* 덩어리 검사: 글씨 획처럼 생기지 않은 덩어리를 지운다.
    mask: 1=검정 후보. dark: 바탕까지 어두운 점(없으면 null). 제자리에서 고친다. */
-function __binClean(mask, dark, w, h, thickOnly){
-  const N=w*h, m=Math.min(w,h);
+function __binClean(mask, dark, w, h, thickOnly, mRef){
+  const N=w*h, m=mRef||Math.min(w,h);
   // 획 두께: 가장 가까운 흰 점까지 거리 (체스판 3-4 거리, 3으로 나누면 픽셀)
   const dt = new Uint16Array(N);
   for(let p=0;p<N;p++) dt[p] = mask[p] ? 65535 : 0;
@@ -535,7 +539,7 @@ function __binClean(mask, dark, w, h, thickOnly){
   for(let s=0;s<N;s++){
     if(!mask[s] || lab[s]) continue;
     id++; let sp=0; stack[sp++]=s; lab[s]=id;
-    let area=0, nDark=0, maxD=0, x0=w, x1=-1, y0=h, y1=-1, edge=false;
+    let area=0, nDark=0, maxD=0, x0=w, x1=-1, y0=h, y1=-1, edge=false, eT=false, eB=false, eL=false, eR=false;
     const members=[];
     while(sp){
       const p=stack[--sp]; members.push(p); area++;
@@ -543,7 +547,8 @@ function __binClean(mask, dark, w, h, thickOnly){
       if(dark && dark[p]) nDark++;
       if(dt[p]>maxD) maxD=dt[p];
       if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
-      if(x===0||y===0||x===w-1||y===h-1) edge=true;
+      if(y===0) eT=true; if(y===h-1) eB=true; if(x===0) eL=true; if(x===w-1) eR=true;
+      if(eT||eB||eL||eR) edge=true;
       for(let dy=-1;dy<=1;dy++){ const yy=y+dy; if(yy<0||yy>=h) continue;
         for(let dx=-1;dx<=1;dx++){ const xx=x+dx; if(xx<0||xx>=w) continue;
           const q=yy*w+xx; if(mask[q] && !lab[q]){ lab[q]=id; stack[sp++]=q; } } }
@@ -561,23 +566,57 @@ function __binClean(mask, dark, w, h, thickOnly){
       (nDark > 0.25*area) ||                              // 바탕이 어두운 곳에서 생긴 덩어리
       (area > 0.015*N && fill > 0.75 && half > 0.05*m) ||  // 속이 꽉 찬 큰 덩어리(얼룩)
       (edge && half > edgeHalf && area > 0.12*N) ||       // 가장자리의 굵은 띠
-      (edge && ((bw > 0.85*w && bh < 0.08*h) || (bh > 0.85*h && bw < 0.08*w))); // 가장자리의 곧은 선
+      (edge && ((bw > 0.85*w && bh < 0.08*h) || (bh > 0.85*h && bw < 0.08*w))) || // 가장자리의 곧은 선
+      ((eT || eB) && bw > 0.6*w && bh < 0.3*h) ||        // 위·아래 가장자리를 따라 길게 깔린 띠(우유갑 밑면의 울퉁불퉁한 주름, 탁자 경계)
+      ((eL || eR) && bh > 0.6*h && bw < 0.3*w);          // 왼쪽·오른쪽 가장자리를 따라 길게 선 띠
     if(drop){ for(const p of members) mask[p]=0; }
     else kept += area;
   }
   return kept;
 }
 
-/* 캔버스를 제자리에서 흑백으로 바꾼다. 돌려주는 값은 살펴보기용 정보 */
-function binarizeCanvas(cv){
-  const w = cv.width, h = cv.height, N = w*h;
-  const ctx = cv.getContext("2d", {willReadFrequently:true});
-  const im = ctx.getImageData(0,0,w,h), d = im.data;
+/* 진하기 검사: 남은 덩어리 가운데 글씨보다 확실히 옅은 것(우유갑 접힌 주름, 연한 긁힘)을 지운다.
+   기준 = 가장 진한 덩어리부터 잉크 넓이의 절반을 채울 때까지의 평균 진하기.
+   그보다 (기준값과의 거리의 55% 넘게) 옅으면 글씨가 아니다. 연필 글씨만 있는 사진은 연필 자신이 기준이 된다. */
+function __binContrast(mask, flat, w, h, thr){
+  const N=w*h, lab=new Int32Array(N), stack=new Int32Array(N);
+  const comps=[]; let id=0, total=0;
+  for(let s0=0;s0<N;s0++){
+    if(!mask[s0] || lab[s0]) continue;
+    id++; let sp=0; stack[sp++]=s0; lab[s0]=id;
+    let area=0, sum=0; const members=[];
+    while(sp){
+      const p=stack[--sp]; members.push(p); area++; sum+=flat[p];
+      const x=p%w, y=(p-x)/w;
+      for(let dy=-1;dy<=1;dy++){ const yy=y+dy; if(yy<0||yy>=h) continue;
+        for(let dx=-1;dx<=1;dx++){ const xx=x+dx; if(xx<0||xx>=w) continue;
+          const q=yy*w+xx; if(mask[q] && !lab[q]){ lab[q]=id; stack[sp++]=q; } } }
+    }
+    comps.push({area, mean:sum/area, members}); total+=area;
+  }
+  if(comps.length < 2) return total;
+  const byDark = comps.slice().sort((a,b)=>a.mean-b.mean);
+  let acc=0, wsum=0;
+  for(const c of byDark){ acc+=c.area; wsum+=c.area*c.mean; if(acc>=total*0.5) break; }
+  const ref = wsum/acc, cut = ref + 0.55*Math.max(0, thr-ref);
+  let kept=0;
+  for(const c of comps){
+    if(c.mean > cut){ for(const p of c.members) mask[p]=0; }
+    else kept+=c.area;
+  }
+  return kept;
+}
+
+/* 흑백의 핵심: d(RGBA) 가운데 (rx,ry,w,h) 사진 자리만 보고 ink(1=검정)를 채운다.
+   mRef = 캔버스 한 변(획 두께·필터 크기의 기준) */
+function __binCore(d, stride, rx, ry, w, h, mRef, ink){
+  const N = w*h;
 
   // ① 회색조와 채도 (투명한 곳은 흰 바탕으로 본다)
   const g = new Float32Array(N), chroma = new Uint8Array(N);
   let twoTone = true;
-  for(let i=0,p=0;p<N;i+=4,p++){
+  for(let p=0;p<N;p++){
+    const x = p%w, y = (p-x)/w, i = ((ry+y)*stride + rx + x)*4;
     const a = d[i+3]/255;
     const r = d[i]*a+255*(1-a), gg = d[i+1]*a+255*(1-a), b = d[i+2]*a+255*(1-a);
     const v = r*0.299 + gg*0.587 + b*0.114;
@@ -585,17 +624,16 @@ function binarizeCanvas(cv){
     chroma[p] = Math.max(r,gg,b) - Math.min(r,gg,b);
     if(twoTone && !(v<0.5 || v>254.5)) twoTone = false;
   }
-  const ink = new Uint8Array(N);
   let info = { threshold:128, contrast:0, ink:0, blank:true };
 
   if(twoTone){
     // 이미 흑백: 검은 점에 덩어리 검사만
     for(let p=0;p<N;p++) ink[p] = g[p]<0.5 ? 1 : 0;
-    const kept = __binClean(ink, null, w, h);
+    const kept = __binClean(ink, null, w, h, false, mRef);
     info = { threshold:128, contrast:255, ink:kept/N, blank:kept/N < 0.002 };
   }else{
     // ② 바탕 밝기
-    const s = Math.min(w,h)/224;
+    const s = mRef/224;
     // 닫힘(최댓값 → 최솟값): 가는 획은 지워지고, 그림자·진한 면의 경계는 제자리에 남는다
     const rMax = Math.max(3, Math.round(14*s)), rBox = Math.max(1, Math.round(3*s));
     const t1 = new Float32Array(N), bg = new Float32Array(N);
@@ -647,7 +685,7 @@ function binarizeCanvas(cv){
           //    그 둘레까지 흰색으로, 가는 것(굵은 펜 글씨 속)은 검정으로
           const thick = new Uint8Array(N);
           for(let p=0;p<N;p++) thick[p]=R[p];
-          __binClean(thick, null, w, h, true);    // true: 두꺼운 덩어리만 남긴다
+          __binClean(thick, null, w, h, true, mRef);    // true: 두꺼운 덩어리만 남긴다
           const rd = Math.max(2, Math.round(3*s));
           const near = new Uint8Array(N), tmp = new Uint8Array(N);
           for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let v=0; const a=Math.max(0,x-rd), b=Math.min(w-1,x+rd);
@@ -659,7 +697,8 @@ function binarizeCanvas(cv){
             if(near[p]) ink[p]=0;
           }
           // ⑥ 덩어리 검사
-          const kept = __binClean(ink, null, w, h);
+          __binClean(ink, null, w, h, false, mRef);
+          const kept = __binContrast(ink, flat, w, h, thr);   // ⑦ 글씨보다 확실히 옅은 덩어리(주름·긁힘) 지우기
           info.ink = kept/N; info.blank = kept/N < 0.002;
         }
       }
@@ -667,11 +706,34 @@ function binarizeCanvas(cv){
     if(info.blank) ink.fill(0);
   }
 
-  for(let i=0,p=0;p<N;i+=4,p++){
-    const v = ink[p] ? 0 : 255;
+  return info;
+}
+
+/* 캔버스를 제자리에서 흑백으로 바꾼다. 돌려주는 값은 살펴보기용 정보.
+   rect = 흰 여백을 뺀 실제 사진 자리 {x,y,w,h}. 없으면 cv.__rect(fitSquare가 적어 둠), 그것도 없으면 캔버스 전체.
+   여백은 계산에 넣지 않는다: 여백의 순백이 바탕 밝기를 끌어올려 사진 가장자리의
+   회색(우유갑 밑면 주름, 그림자)을 글씨로 잘못 보는 일을 막고, 가장자리 검사도 사진의 가장자리에서 한다. */
+function binarizeCanvas(cv, rect){
+  const W = cv.width, H = cv.height;
+  const ctx = cv.getContext("2d", {willReadFrequently:true});
+  const im = ctx.getImageData(0,0,W,H), d = im.data;
+  const given = rect && rect.rect ? rect.rect : rect;          // {rect:{…}} 꼴로 줘도 된다
+  const r = given || cv.__rect || {x:0, y:0, w:W, h:H};
+  let x0 = Math.max(0, Math.ceil(r.x - 0.01)), y0 = Math.max(0, Math.ceil(r.y - 0.01));
+  let x1 = Math.min(W, Math.floor(r.x + r.w + 0.01)), y1 = Math.min(H, Math.floor(r.y + r.h + 0.01));
+  if(x1 - x0 < 8 || y1 - y0 < 8){ x0 = 0; y0 = 0; x1 = W; y1 = H; }
+  const w = x1 - x0, h = y1 - y0;
+  const ink = new Uint8Array(w*h);
+  const info = __binCore(d, W, x0, y0, w, h, Math.min(W,H), ink);
+  // 사진 자리 밖은 흰색, 안은 ink 대로
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i = (y*W+x)*4;
+    const inside = x>=x0 && x<x1 && y>=y0 && y<y1;
+    const v = inside && ink[(y-y0)*w + (x-x0)] ? 0 : 255;
     d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
   }
   ctx.putImageData(im,0,0);
+  info.ink = info.ink * (w*h) / (W*H);       // 캔버스 전체에 대한 비율로 돌려준다
   return info;
 }
 
